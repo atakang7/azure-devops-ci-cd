@@ -40,6 +40,8 @@ const { chromium } = require('playwright-core');
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('dialog', { name: /Browser Test Hotel/ }).getByRole('button', { name: 'Close' }).click();
     await page.screenshot({ path: 'browser-evidence/hotel-mobile.png', fullPage: true });
+    console.log('VISUAL_MOBILE_JPEG:' +
+      (await page.screenshot({ type: 'jpeg', quality: 55 })).toString('base64'));
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 4);
     assert.equal(overflow, false, 'hotel UI overflows the mobile viewport');
     console.log('PASS mobile layout (390px)');
