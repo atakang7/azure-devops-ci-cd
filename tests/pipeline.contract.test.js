@@ -18,6 +18,8 @@ describe('Azure pipeline contract', () => {
 
   it('requires readiness, bounded Jira review and human production approval', () => {
     expect(source).toContain('/readyz');
+    expect(source).toContain('deployToSlotOrASE: true');
+    expect(source).toContain('slotName: staging');
     expect(source).toContain('curl --fail');
     expect(source).not.toContain('continueOnError: true');
     expect(source).toContain('ManualValidation@0');
