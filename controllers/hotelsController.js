@@ -5,9 +5,7 @@ import { sendTelegramMessage } from '../apis/services/telegram.js';
 // Get all hotels
 export const getAllHotels = async (req, res) => {
   try {
-    console.log("fetching hotels")
     const hotels = await Hotel.find();
-    console.log(hotels)
     res.status(200).json(hotels);
   } catch (error) {
     console.error('Error fetching hotels:', error);
@@ -50,7 +48,7 @@ export const createHotel = async (req, res) => {
   } = req.body;
 
   // Validate required fields
-  if (!name || !address || !phone || !rating || !price || !description || !facilities || !images || !owner) {
+  if (!name || !address || !phone || rating == null || price == null || !description || !facilities || !images || !owner) {
     return res.status(400).json({ message: 'All required fields must be provided' });
   }
 
@@ -98,7 +96,7 @@ export const updateHotel = async (req, res) => {
     const updatedHotel = await Hotel.findByIdAndUpdate(
       req.params.id,
       { name, address },
-      { new: true }
+      { new: true, runValidators: true }
     );
     if (!updatedHotel) {
       return res.status(404).json({ message: 'Hotel not found' });
