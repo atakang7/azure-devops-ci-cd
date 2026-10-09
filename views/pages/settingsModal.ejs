@@ -1,134 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text-to-Speech Example</title>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.5.0/dist/full.css" rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .modal-box {
-            border-radius: 12px;
-            max-width: 90%;
-            width: 500px;
-            background: #1f2937;
-            color: #e2e8f0;
-        }
-    </style>
-</head>
-<body class="bg-gray-900 text-gray-200 flex flex-col items-center h-screen">
-    <!-- Main Button -->
-    <button class="ui button flex items-center" onclick="document.getElementById('settingsModal').showModal()"><i class="icon fas fa-cogs"></i>Settings</button>
-
-    <!-- Settings Modal -->
-    <dialog id="settingsModal" class="modal modal-bottom sm:modal-middle">
-        <div class="modal-box">
-            <h3 class="text-2xl font-bold mb-4">Settings</h3>
-
-            <!-- Voice Selection -->
-            <div class="mb-4">
-                <label for="voiceSelect" class="block text-lg font-semibold">Voice:</label>
-                <select id="voiceSelect" class="select select-bordered w-full">
-                    <!-- Options will be populated dynamically -->
-                </select>
-            </div>
-
-            <!-- Rate Selection -->
-            <div class="mb-4">
-                <label for="rateSelect" class="block text-lg font-semibold">Speech Rate:</label>
-                <input type="range" id="rateSelect" min="0.1" max="2" step="0.1" value="1" class="range range-primary w-full">
-                <span id="rateValue" class="text-lg">1</span>
-            </div>
-
-            <!-- Pitch Selection -->
-            <div class="mb-4">
-                <label for="pitchSelect" class="block text-lg font-semibold">Pitch:</label>
-                <input type="range" id="pitchSelect" min="0" max="2" step="0.1" value="1" class="range range-primary w-full">
-                <span id="pitchValue" class="text-lg">1</span>
-            </div>
-
-            <div class="modal-action flex justify-center">
-                <button class="btn btn-secondary" onclick="document.getElementById('settingsModal').close()">Close</button>
-            </div>
-        </div>
-    </dialog>
-
-    <script>
-        // Function to list available voices and populate the select element
-        function populateVoiceOptions() {
-            const voiceSelect = document.getElementById('voiceSelect');
-
-            const loadVoices = new Promise((resolve) => {
-                const voices = speechSynthesis.getVoices();
-                if (voices.length > 0) {
-                    resolve(voices);
-                } else {
-                    speechSynthesis.onvoiceschanged = () => {
-                        resolve(speechSynthesis.getVoices());
-                    };
-                }
-            });
-
-            loadVoices.then(voices => {
-                voiceSelect.innerHTML = '';
-                voices.forEach(voice => {
-                    const option = document.createElement('option');
-                    option.value = voice.name;
-                    option.textContent = voice.name;
-                    voiceSelect.appendChild(option);
-                });
-            }).catch(error => {
-                console.error('Error loading voices:', error);
-            });
-        }
-
-        // Function to speak the text with selected settings
-        function speakText() {
-            const result = { answer: "Hello, how can I help you today?" }; // Replace with your actual text
-
-            const voiceName = document.getElementById('voiceSelect').value;
-            const rate = parseFloat(document.getElementById('rateSelect').value);
-            const pitch = parseFloat(document.getElementById('pitchSelect').value);
-
-            const loadVoices = new Promise((resolve) => {
-                const voices = speechSynthesis.getVoices();
-                if (voices.length > 0) {
-                    resolve(voices);
-                } else {
-                    speechSynthesis.onvoiceschanged = () => {
-                        resolve(speechSynthesis.getVoices());
-                    };
-                }
-            });
-
-            loadVoices.then(voices => {
-                const voice = voices.find(v => v.name === voiceName) || voices[0];
-
-                const utterance = new SpeechSynthesisUtterance(result.answer);
-                if (voice) {
-                    utterance.voice = voice;
-                }
-                utterance.rate = rate;
-                utterance.pitch = pitch;
-
-                speechSynthesis.speak(utterance);
-            }).catch(error => {
-                console.error('Error loading voices:', error);
-            });
-        }
-
-        // Populate voices on page load
-        window.addEventListener('load', () => {
-            populateVoiceOptions();
-        });
-
-        // Update rate and pitch value display
-        document.getElementById('rateSelect').addEventListener('input', (e) => {
-            document.getElementById('rateValue').textContent = e.target.value;
-        });
-        document.getElementById('pitchSelect').addEventListener('input', (e) => {
-            document.getElementById('pitchValue').textContent = e.target.value;
-        });
-    </script>
-</body>
-</html>
+<button type="button" class="rounded-lg border border-slate-500 px-3 py-2 text-sm"
+  onclick="document.getElementById('settingsModal').showModal()">Voice settings</button>
+<dialog id="settingsModal" class="w-full max-w-md rounded-xl border border-slate-600 bg-slate-900 p-6 text-slate-100 shadow-2xl backdrop:bg-black/70">
+  <h2 class="mb-4 text-xl font-semibold">Voice settings</h2>
+  <label class="mb-4 block text-sm">Voice
+    <select id="voiceSelect" class="mt-2 w-full rounded bg-slate-700 p-2"></select>
+  </label>
+  <label class="mb-4 block text-sm">Rate <span id="rateValue">1</span>
+    <input id="rateSelect" type="range" min="0.5" max="2" step="0.1" value="1" class="mt-2 block w-full">
+  </label>
+  <label class="mb-4 block text-sm">Pitch <span id="pitchValue">1</span>
+    <input id="pitchSelect" type="range" min="0" max="2" step="0.1" value="1" class="mt-2 block w-full">
+  </label>
+  <form method="dialog" class="mt-6 text-right">
+    <button class="rounded bg-slate-700 px-4 py-2 text-sm hover:bg-slate-600">Close</button>
+  </form>
+</dialog>
+<script>
+(() => {
+  const voices = document.getElementById('voiceSelect');
+  const synth = window.speechSynthesis;
+  const refresh = () => {
+    if (!synth) return;
+    const selected = voices.value;
+    voices.replaceChildren();
+    for (const voice of synth.getVoices()) {
+      const option = new Option(voice.name + ' (' + voice.lang + ')', voice.name);
+      voices.add(option);
+    }
+    if (selected) voices.value = selected;
+  };
+  refresh();
+  synth?.addEventListener?.('voiceschanged', refresh);
+  for (const type of ['rate', 'pitch']) {
+    const input = document.getElementById(type + 'Select');
+    input.addEventListener('input', () => {
+      document.getElementById(type + 'Value').textContent = input.value;
+    });
+  }
+})();
+</script>

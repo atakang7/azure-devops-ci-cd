@@ -1,0 +1,90 @@
+name: Backend verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      MONGO_URI: mongodb://127.0.0.1:27017/nevotek_ci
+      API_TOKEN: ci-integration-token-longer-than-24
+      OPEN_API_KEY: ''
+      HOST: 127.0.0.1
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install from lockfile
+        run: npm ci
+      - name: Verify JavaScript syntax
+        run: npm run build
+      - name: Test with actual MongoDB
+        run: npm test
+      - name: Check published pipeline for credentials
+        run: |
+          ! grep -E -i 'encodedCreds=|JIRA_CREDS *=|password123' azure-pipelines.yml
+      - name: Build and start service
+        run: |
+          node index.js > "$RUNNER_TEMP/service.log" 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:3000/readyz; then break; fi
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:3000/healthz
+          curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/users | grep -qx 401
+      - name: Seed browser fixtures
+        run: node scripts/seed-browser.mjs
+      - name: Install browser runner
+        run: |
+          npm install --no-save --no-package-lock playwright-core@1.58.2
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then echo "Chromium not installed"; exit 1; fi
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+      - name: Browser E2E and visual snapshots
+        run: node scripts/browser-e2e.cjs
+      - name: Build runtime Docker image
+        run: docker build --pull -t hospitality-demo:ci .
+      - name: Smoke-test runtime container
+        run: |
+          docker run -d --rm --network host --name hospitality-ci \
+            -e HOST=127.0.0.1 -e PORT=3010 \
+            -e MONGO_URI="$MONGO_URI" -e API_TOKEN="$API_TOKEN" \
+            hospitality-demo:ci
+          trap 'docker logs hospitality-ci || true; docker stop hospitality-ci || true' EXIT
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3010/readyz; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+          curl -fsS -H "Authorization: Bearer $API_TOKEN" http://127.0.0.1:3010/users >/dev/null
+      - name: Upload screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-evidence
+          path: browser-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Service diagnostics on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/service.log" || true

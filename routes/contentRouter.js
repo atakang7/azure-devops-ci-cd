@@ -1,55 +1,9 @@
 import { Router } from 'express';
-import { loginUser, getDashboardDetails, logClientVisit, homePage } from '../controllers/contentController.js';
+import { getDashboardDetails, logClientVisit, homePage } from '../controllers/contentController.js';
 
 const router = Router();
 
 router.get('/', homePage);
-
-/**
- * @swagger
- * /login:
- *   post:
- *     summary: Log in a user
- *     tags: [Content]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *                 description: The user's username
- *               password:
- *                 type: string
- *                 description: The user's password
- *             example:
- *               username: "john_doe"
- *               password: "password123"
- *     responses:
- *       '200':
- *         description: Login successful, returns JWT token
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 token:
- *                   type: string
- *                   description: JWT token for authentication
- *       '401':
- *         description: Unauthorized, invalid credentials
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   description: The error message
- */
-router.post('/login', loginUser);
 
 /**
  * @swagger

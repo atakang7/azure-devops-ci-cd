@@ -44,7 +44,7 @@ export const getFoodById = async (req, res) => {
  * @param {Object} res - Express response object
  */
 export const createFood = async (req, res) => {
-  const { name, price, description, image, category, predictedLimit, Hotel } = req.body;
+  const { name, price, description, image, category, hotel } = req.body;
 
   try {
     // Create a new instance of the Food model with the required fields
@@ -54,8 +54,7 @@ export const createFood = async (req, res) => {
       description,
       image,
       category,
-      predictedLimit, // Make sure this is included
-      hotel: Hotel // The hotel ID, which is required
+      hotel
     });
 
     // Save the new food to the database
@@ -92,7 +91,7 @@ export const updateFood = async (req, res) => {
     const updatedFood = await Foods.findByIdAndUpdate(
       id,
       { name, price, description, image, category },
-      { new: true } // Return the updated document
+      { new: true, runValidators: true } // Return the updated document
     );
 
     if (!updatedFood) {

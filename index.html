@@ -1,290 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azure DevOps CI/CD Pipeline: Technical Implementation</title>
-    <style>
-        body, html {
-            height: 100%;
-            margin: 0;
-            font-family: 'Consolas', monospace;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-        }
-        .slide {
-            height: 100%;
-            padding: 40px;
-            box-sizing: border-box;
-            display: none;
-        }
-        .slide.active {
-            display: block;
-        }
-        h1 {
-            color: #569cd6;
-            margin-bottom: 30px;
-        }
-        ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-        li {
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-        .code-block {
-            background-color: #2d2d2d;
-            border: 1px solid #3e3e3e;
-            border-radius: 5px;
-            padding: 15px;
-            margin-top: 15px;
-            font-family: 'Consolas', monospace;
-            white-space: pre-wrap;
-        }
-        .tech-stack {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 30px;
-        }
-        .tech-item {
-            text-align: center;
-            font-weight: bold;
-            color: #4ec9b0;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101e30">
+  <meta name="description" content="A reference CI/CD delivery workflow with staged releases, automated checks, Jira review, and manual production approval.">
+  <title>Azure DevOps Delivery Workflow</title>
+  <style>
+    :root { color-scheme: light; --ink:#15263b; --muted:#52667b; --border:#dae2ea; --navy:#101e30; --teal:#007f77; --bg:#f6f8fa }
+    *, *::before, *::after { box-sizing:border-box }
+    html { scroll-behavior:smooth }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.55 }
+    a { color:inherit }
+    a:focus-visible { outline:3px solid #38b2ac; outline-offset:3px }
+    .container { max-width:1100px; margin:auto; padding:0 26px }
+    header { background:var(--navy); color:#fff }
+    .nav { display:flex; justify-content:space-between; align-items:center; gap:18px; min-height:72px }
+    .mark { font-weight:750; letter-spacing:-.025em; font-size:1.05rem; text-decoration:none }
+    .nav a:last-child { font-size:.88rem; font-weight:600; padding:10px 14px; border:1px solid #45566a; border-radius:8px; text-decoration:none }
+    .hero { padding:90px 0 92px; max-width:800px }
+    .eyebrow { display:inline-block; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.17em; color:#81ded2 }
+    h1 { font-size:clamp(2.5rem,5.5vw,4.4rem); line-height:1.12; letter-spacing:-.052em; margin:20px 0 22px; max-width:760px }
+    .hero p { color:#c1cddc; font-size:1.08rem; max-width:635px; margin:0 }
+    .hero .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:32px }
+    .actions a { border-radius:7px; padding:12px 18px; text-decoration:none; font-weight:650; font-size:.91rem; background:#fff; color:var(--navy) }
+    .actions a.secondary { background:transparent; color:#fff; border:1px solid #6c8093 }
+    main { padding:60px 0 90px }
+    .section-head { max-width:700px; margin-bottom:25px }
+    h2 { letter-spacing:-.03em; font-size:1.75rem; margin:0 0 10px }
+    .section-head p { color:var(--muted); margin:0 }
+    .flow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px }
+    .step { min-height:177px; border-radius:12px; padding:23px; border:1px solid var(--border); background:#fff; box-shadow:0 3px 13px #13263b06 }
+    .number { font-size:.75rem; color:var(--teal); font-weight:850; letter-spacing:.08em }
+    h3 { margin:12px 0 8px; font-size:1.08rem; line-height:1.25; letter-spacing:-.015em }
+    .step p { color:var(--muted); font-size:.91rem; margin:0 }
+    .panel { display:grid; grid-template-columns:1.1fr 1fr; gap:35px; margin-top:60px; border-radius:15px; padding:38px; background:#eaf0f5; border:1px solid #dce6ed }
+    .panel h2 { font-size:1.5rem }
+    .panel p { margin:8px 0 0; color:var(--muted) }
+    .panel ul { margin:0; padding-left:19px; display:grid; gap:13px; font-size:.92rem }
+    .state { margin-top:34px; border-top:1px solid var(--border); padding-top:26px; display:flex; gap:25px; flex-wrap:wrap; align-items:start }
+    .state strong { display:block; font-size:.79rem; text-transform:uppercase; letter-spacing:.08em }
+    .state span { color:var(--muted); font-size:.87rem }
+    footer { padding:24px 0; color:#68788a; border-top:1px solid var(--border); font-size:.82rem }
+    @media(max-width:750px) {
+      .hero { padding:66px 0 75px }
+      .flow { grid-template-columns:repeat(2,minmax(0,1fr)) }
+      .panel { grid-template-columns:1fr; gap:22px; padding:27px }
+    }
+    @media(max-width:510px) {
+      .container { padding:0 18px }
+      .flow { grid-template-columns:1fr }
+      .step { min-height:unset }
+      .nav { align-items:center }
+      .nav a:last-child { padding:8px 10px }
+      h1 { font-size:2.7rem }
+    }
+  </style>
 </head>
 <body>
-    <div id="slideContainer">
-        <div class="slide active">
-            <h1>Azure DevOps CI/CD Pipeline: Technical Implementation</h1>
-            <ul>
-                <li>Objective: Implement a robust, scalable CI/CD pipeline</li>
-                <li>Key Technologies:</li>
-            </ul>
-            <div class="tech-stack">
-                <div class="tech-item">Azure DevOps</div>
-                <div class="tech-item">Azure Pipelines</div>
-                <div class="tech-item">Jira API</div>
-                <div class="tech-item">Azure Web Apps</div>
-                <div class="tech-item">Docker</div>
-            </div>
+  <header>
+    <div class="container">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="mark" href="#top">Azure DevOps / Release Engineering</a>
+        <a href="https://github.com/atakang7/azure-devops-ci-cd">Source on GitHub ↗</a>
+      </nav>
+      <section class="hero" id="top">
+        <span class="eyebrow">Delivery engineering · reference implementation</span>
+        <h1>Release safely, not just quickly.</h1>
+        <p>A staged deployment workflow combining repeatable builds, container releases, integration checks, tester review, and explicit approval before production.</p>
+        <div class="actions">
+          <a href="#workflow">Explore the workflow ↓</a>
+          <a class="secondary" href="https://github.com/atakang7/azure-devops-ci-cd/blob/main/azure-pipelines.yml">Read pipeline YAML ↗</a>
         </div>
-
-        <div class="slide">
-            <h1>Pipeline Architecture</h1>
-            <ul>
-                <li>1. Code Commit (Azure Repos)</li>
-                <li>2. CI Pipeline Trigger</li>
-                <li>3. Build, Lint, and Unit Test</li>
-                <li>4. Containerization & Push to Azure Container Registry</li>
-                <li>5. Blue-Green Deployment to Staging</li>
-                <li>6. Automated Jira Issue Creation</li>
-                <li>7. Integration Testing & Approval</li>
-                <li>8. Production Deployment (Blue-Green Swap)</li>
-            </ul>
-        </div>
-
-        <div class="slide">
-            <h1>Local Agent Implementation</h1>
-            <ul>
-                <li>Challenge: Azure for Students subscription parallelism limitations</li>
-                <li>Solution: Implement self-hosted agent</li>
-                <li>Implementation Steps:
-                    <ol>
-                        <li>Download and install agent on local machine</li>
-                        <li>Configure agent pool in Azure DevOps</li>
-                        <li>Set up authentication for the agent</li>
-                    </ol>
-                </li>
-            </ul>
-            <div class="code-block">
-# PowerShell script to configure and run the agent
-.\config.cmd --unattended `
-             --url https://dev.azure.com/yourorg `
-             --auth pat `
-             --token yourpat `
-             --pool default `
-             --agent myagent `
-             --replace
-.\run.cmd
-            </div>
-        </div>
-
-        <div class="slide">
-            <h1>Azure Pipelines Configuration</h1>
-            <ul>
-                <li>YAML-based pipeline definition</li>
-                <li>Multi-stage pipeline for CI/CD</li>
-            </ul>
-            <div class="code-block">
-# Azure Pipelines YAML
-trigger:
-  - main
-
-stages:
-- stage: Build
-  jobs:
-  - job: BuildJob
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - task: NodeTool@0
-      inputs:
-        versionSpec: '14.x'
-    - script: |
-        npm install
-        npm run build
-        npm test
-      displayName: 'npm install, build and test'
-
-- stage: Deploy
-  jobs:
-  - deployment: DeployWeb
-    pool:
-      vmImage: 'ubuntu-latest'
-    environment: 'production'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: AzureWebApp@1
-            inputs:
-              azureSubscription: 'Resource Manager Connection'
-              appName: 'yourwebappname'
-              appType: 'webApp'
-            </div>
-        </div>
-
-        <div class="slide">
-            <h1>Blue-Green Deployment Implementation</h1>
-            <ul>
-                <li>Utilized Azure Web App deployment slots</li>
-                <li>Process:
-                    <ol>
-                        <li>Deploy to staging slot</li>
-                        <li>Run tests against staging</li>
-                        <li>Swap slots if tests pass</li>
-                    </ol>
-                </li>
-            </ul>
-            <div class="code-block">
-# Azure CLI commands for slot swapping
-az webapp deployment slot swap \
-    --resource-group myResourceGroup \
-    --name myWebApp \
-    --slot staging \
-    --target-slot production
-            </div>
-        </div>
-
-        <div class="slide">
-            <h1>Jira Integration</h1>
-            <ul>
-                <li>Used Jira REST API for issue creation</li>
-                <li>Implemented in Azure Pipeline using a custom task</li>
-            </ul>
-            <div class="code-block">
-# Python script for Jira issue creation
-import requests
-import json
-
-url = "https://your-domain.atlassian.net/rest/api/2/issue"
-auth = ("email@example.com", "api_token")
-headers = {"Accept": "application/json", "Content-Type": "application/json"}
-
-payload = json.dumps({
-    "fields": {
-        "project": {"key": "PROJECT_KEY"},
-        "summary": "New build ready for testing",
-        "description": "A new build has been deployed to staging.",
-        "issuetype": {"name": "Task"}
-    }
-})
-
-response = requests.post(url, data=payload, headers=headers, auth=auth)
-print(json.dumps(json.loads(response.text), sort_keys=True, indent=4, separators=(",", ": ")))
-            </div>
-        </div>
-
-        <div class="slide">
-            <h1>Containerization</h1>
-            <ul>
-                <li>Used Docker for application containerization</li>
-                <li>Implemented multi-stage Dockerfile for optimized images</li>
-            </ul>
-            <div class="code-block">
-# Multi-stage Dockerfile
-FROM node:14 AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-FROM node:14-alpine
-WORKDIR /app
-COPY --from=builder /app/dist ./dist
-COPY package*.json ./
-RUN npm install --only=production
-EXPOSE 3000
-CMD ["npm", "start"]
-            </div>
-        </div>
-
-        <div class="slide">
-            <h1>Security Implementation</h1>
-            <ul>
-                <li>Azure Key Vault for secrets management</li>
-                <li>Implemented least-privilege access model</li>
-                <li>Container image scanning</li>
-            </ul>
-            <div class="code-block">
-# Azure CLI command to create a Key Vault and add a secret
-az keyvault create --name "myKeyvault" --resource-group "myResourceGroup" --location "eastus"
-az keyvault secret set --vault-name "myKeyvault" --name "mySecret" --value "secretValue"
-
-# Retrieving secret in pipeline
-variables:
-  mySecret: $[azKeyVault(myKeyvault)mySecret]
-            </div>
-        </div>
-
-        <div class="slide">
-            <h1>Challenges and Solutions</h1>
-            <ul>
-                <li>Challenge: Complex service principal configuration
-                    <br>Solution: Implemented a script to automate service principal creation and role assignment</li>
-                <li>Challenge: Inconsistent build environments
-                    <br>Solution: Implemented Docker-based build agents for consistency</li>
-                <li>Challenge: Long-running tests slowing down the pipeline
-                    <br>Solution: Implemented parallel test execution and test splitting strategies</li>
-            </ul>
-        </div>
+      </section>
     </div>
-
-    <script>
-        let currentSlide = 0;
-        const slides = document.querySelectorAll('.slide');
-
-        function showSlide(n) {
-            slides[currentSlide].classList.remove('active');
-            currentSlide = (n + slides.length) % slides.length;
-            slides[currentSlide].classList.add('active');
-        }
-
-        function nextSlide() {
-            showSlide(currentSlide + 1);
-        }
-
-        function prevSlide() {
-            showSlide(currentSlide - 1);
-        }
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === "ArrowRight") nextSlide();
-            if (e.key === "ArrowLeft") prevSlide();
-        });
-    </script>
+  </header>
+  <main class="container">
+    <section id="workflow" aria-labelledby="workflow-heading">
+      <div class="section-head">
+        <h2 id="workflow-heading">Delivery path</h2>
+        <p>One artifact progresses through explicit verification and approval boundaries. A failed gate stops promotion.</p>
+      </div>
+      <div class="flow">
+        <article class="step"><div class="number">01 / INTEGRATE</div><h3>Build & test</h3><p>Install locked dependencies; run real backend tests against MongoDB.</p></article>
+        <article class="step"><div class="number">02 / PACKAGE</div><h3>Container image</h3><p>Build a versioned image and publish it to the configured registry.</p></article>
+        <article class="step"><div class="number">03 / DEPLOY</div><h3>Staging slot</h3><p>Release into an isolated Azure App Service deployment slot.</p></article>
+        <article class="step"><div class="number">04 / VERIFY</div><h3>Readiness check</h3><p>Require a successful HTTP readiness response; deployment fails closed.</p></article>
+        <article class="step"><div class="number">05 / REVIEW</div><h3>Jira & approval</h3><p>Create a review issue, then require human authorization to promote.</p></article>
+        <article class="step"><div class="number">06 / PROMOTE</div><h3>Production swap</h3><p>Use an App Service slot swap only after prior stages succeed.</p></article>
+      </div>
+    </section>
+    <section class="panel" aria-labelledby="controls-heading">
+      <div>
+        <h2 id="controls-heading">Design constraints</h2>
+        <p>This is an infrastructure and application reference, not a claim of an independently verified live Azure deployment. Cloud resources, access policies, and external integrations need their own environment-specific acceptance tests.</p>
+      </div>
+      <ul>
+        <li>Required secrets live in Azure variable groups, never in pipeline source.</li>
+        <li>Failed smoke checks block promotion instead of silently continuing.</li>
+        <li>Production requires an explicit human approval step.</li>
+        <li>Application startup checks MongoDB connectivity and guards API routes.</li>
+      </ul>
+    </section>
+    <div class="state">
+      <div><strong>Executable locally</strong><span>Node.js API + MongoDB test environment</span></div>
+      <div><strong>Requires external setup</strong><span>Azure service connections, App Service, Jira</span></div>
+      <div><strong>Source of truth</strong><span>azure-pipelines.yml</span></div>
+    </div>
+  </main>
+  <footer><div class="container">Azure DevOps release workflow · architecture & verification reference</div></footer>
 </body>
 </html>

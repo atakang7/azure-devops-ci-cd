@@ -1,264 +1,167 @@
-trigger: none
+# Azure DevOps reference pipeline. Requires an Azure variable group named
+# deployment-settings (see README) and configured service connections.
+trigger:
+  branches:
+    include: [main]
+
+variables:
+- group: deployment-settings
 
 stages:
 - stage: CI
   jobs:
   - job: BuildAndTest
     pool:
-      name: 'nevotek-agent'
-      demands:
-        - agent.name -equals nevotek-agent-001
+      vmImage: ubuntu-latest
     steps:
     - task: NodeTool@0
       inputs:
-        versionSource: 'spec'
-        versionSpec: '22.2.0'
+        versionSpec: '22.x'
+    - bash: |
+        set -euo pipefail
+        docker run -d --name hospitality-ci-mongo -p 127.0.0.1:27017:27017 mongo:7
+        for attempt in $(seq 1 30); do
+          if docker exec hospitality-ci-mongo mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1; then exit 0; fi
+          sleep 2
+        done
+        echo "MongoDB fixture failed to start"
+        exit 1
+      displayName: Start isolated MongoDB fixture
     - script: |
-        npm install
-        npm run lint
-        npm run test
-        npm run test:integration
-      displayName: 'Install, lint, and test'
-    - script: npm run build
-      displayName: 'Build application'
+        set -e
+        npm ci
+        npm test
+        npm run build
+      displayName: Install, test, and build
+      env:
+        MONGO_URI: mongodb://127.0.0.1:27017/nevotek_ci
+        API_TOKEN: ci-integration-token-longer-than-24
+    - bash: docker rm -f hospitality-ci-mongo || true
+      displayName: Remove test database
+      condition: always()
     - task: Docker@2
       inputs:
-        containerRegistry: 'acr-nonprod1927'
-        repository: 'myrepo'
-        command: 'buildAndPush'
-        Dockerfile: '**/Dockerfile'
+        containerRegistry: $(acrServiceConnection)
+        repository: $(imageRepository)
+        command: buildAndPush
+        Dockerfile: Dockerfile
         tags: |
           $(Build.BuildId)
-          latest
 
-- stage: DeployToStaging
+- stage: Staging
+  dependsOn: CI
   jobs:
-  - deployment: DeployToStaging
-    pool:
-      name: 'nevotek-agent'
-      demands:
-        - agent.name -equals nevotek-agent-001
+  - deployment: Deploy
     environment: Staging
+    pool:
+      vmImage: ubuntu-latest
     strategy:
       runOnce:
         deploy:
           steps:
           - task: AzureWebAppContainer@1
             inputs:
-              azureSubscription: 'myconnection'
-              slotName: 'development'
-              appName: 'nevotekapp'
-              containers: 'nonprod1927.azurecr.io/myrepo:$(Build.BuildId)'
+              azureSubscription: $(azureServiceConnection)
+              appName: $(webAppName)
+              deployToSlotOrASE: true
+              resourceGroupName: $(resourceGroup)
+              slotName: staging
+              containers: $(registryHost)/$(imageRepository):$(Build.BuildId)
 
-- stage: Tests
+- stage: Smoke
+  dependsOn: Staging
   jobs:
-  - job: SiteStatusCheck
+  - job: CheckReadiness
     pool:
-      name: 'nevotek-agent'
-      demands:
-        - agent.name -equals nevotek-agent-001
+      vmImage: ubuntu-latest
     steps:
-    - script: |
-        echo "Checking site status..."
-        RESPONSE=$(curl --max-time 100 -o /dev/null -s -w "%{http_code}\n" https://nevotekapp-development.azurewebsites.net/)
-        if [ $RESPONSE -ne 200 ]; then
-          echo "Site is not reachable, returned status: $RESPONSE"
-          exit 1
-        else
-          echo "Site is up and running with status: $RESPONSE"
-        fi
-      displayName: 'Site Status Check (200 OK)'
-      continueOnError: true
+    - bash: |
+        set -euo pipefail
+        curl --fail --silent --show-error \
+          --retry 8 --retry-all-errors --retry-delay 5 --max-time 15 \
+          "$(stagingUrl)/readyz"
+      displayName: Require successful staging readiness
 
-- stage: NotifyTester
+- stage: TesterReview
+  dependsOn: Smoke
   jobs:
-  - job: CreateAndNotifyJiraIssue
+  - job: CreateJiraIssue
     pool:
-      name: 'nevotek-agent'
-      demands:
-        - agent.name -equals nevotek-agent-001
+      vmImage: ubuntu-latest
     steps:
-    - script: |
-        #!/bin/bash
-        set -e  # Exit immediately if a command exits with a non-zero status.
-
-        # Variables
-        jiraUrl="https://nevotektask001.atlassian.net/rest/api/2/issue"
-        jiraUser="pwxcv7352@gmail.com"
-        encodedCreds="cHd4Y3Y3MzUyQGdtYWlsLmNvbTpBVEFUVDN4RmZHRjBXSGNGOHBuZE9uWENRVDFuT3IybHk3N1ZmTkFJZnRmWmo1UXUzSFlvRkY3ZUV4R19WSmlubUVKOW45cHk2YlNyTWxkeUhrMWxZdWVJUkE4cXg1eTRpLVR1ZEtCT3lWTEJZWlZBRjdueDcyd2xyeDJDX1lPSURiN3dmeklQbl8wOXlwZ0hfV3R1X1ZUeHRhTWc5dVAzbTZxN2l3cllxZkxyR2RfRF9hZ1MxbDQ9OEVDN0E0RTY="
-        
-        # Create Issue JSON
-        createIssueBody=$(cat <<EOF
-        {
-            "fields": {
-               "project": {
-                  "key": "NP"
-               },
-               "summary": "Deployment Ready for Testing",
-               "description": "The deployment of the development image is complete and is ready for testing. The application is accessible at https://nevotekapp-development.azurewebsites.net/. Please approve or reject the test cases.",
-               "issuetype": {
-                  "name": "Task"
-               }
-           }
-        }
-        EOF
-        )
-
-        # Create Jira Issue
-        response=$(curl -s -w "\n%{http_code}" -X POST "$jiraUrl" \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Basic $encodedCreds" \
-          -d "$createIssueBody")
-
-        # Separate response body from HTTP status code
-        httpCode=$(echo "$response" | tail -n1)
-        responseBody=$(echo "$response" | head -n-1)
-
-        # Check HTTP response code
-        if [ "$httpCode" -ne 201 ]; then
-          echo "Failed to create Jira issue. HTTP response code: $httpCode"
-          echo "Response body: $responseBody"
-          exit 1
-        fi
-
-        # Extract Issue Key
-        issueKey=$(echo "$responseBody" | jq -r '.key')
-
-        if [ -z "$issueKey" ] || [ "$issueKey" == "null" ]; then
-          echo "Failed to extract Jira issue key. Response: $responseBody"
-          exit 1
-        fi
-
-        echo "##vso[task.setvariable variable=JIRA_ISSUE_KEY;isoutput=true]$issueKey"
-        echo "Jira issue created with key: $issueKey"
-      displayName: 'Create Jira Issue'
-      name: createJiraIssue
-      failOnStderr: false
-
-    - script: |
-          #!/bin/bash
-          set -e
-
-          handle_error() {
-            echo "Error occurred in script at line: ${1}."
-            echo "Line exited with status: ${2}"
-          }
-
-          trap 'handle_error ${LINENO} $?' ERR
-
-          # Ensure JIRA_ISSUE_KEY is set
-          if [ -z "${JIRA_ISSUE_KEY}" ]; then
-            echo "Error: JIRA_ISSUE_KEY is not set"
-            exit 1
-          fi
-
-          jiraUrl="https://nevotektask001.atlassian.net/rest/api/2/issue/${JIRA_ISSUE_KEY}"
-          encodedCreds="cHd4Y3Y3MzUyQGdtYWlsLmNvbTpBVEFUVDN4RmZHRjBXSGNGOHBuZE9uWENRVDFuT3IybHk3N1ZmTkFJZnRmWmo1UXUzSFlvRkY3ZUV4R19WSmlubUVKOW45cHk2YlNyTWxkeUhrMWxZdWVJUkE4cXg1eTRpLVR1ZEtCT3lWTEJZWlZBRjdueDcyd2xyeDJDX1lPSURiN3dmeklQbl8wOXlwZ0hfV3R1X1ZUeHRhTWc5dVAzbTZxN2l3cllxZkxyR2RfRF9hZ1MxbDQ9OEVDN0E0RTY="
-
-          approved=false
-          maxAttempts=60
-          attempt=0
-
-          # Ensure jq is available
-          if ! command -v jq &> /dev/null; then
-            echo "Error: jq is not installed and this script doesn't have permission to install it."
-            echo "Please install jq or use a build agent with jq pre-installed."
-            exit 1
-          fi
-
-          while [ "$approved" = false ] && [ $attempt -lt $maxAttempts ]; do
-            response=$(curl -s -H "Authorization: Basic $encodedCreds" -H "Content-Type: application/json" "$jiraUrl")
-            
-            if [ -z "$response" ]; then
-              echo "Error: Empty response from JIRA API"
-              exit 1
-            fi
-            
-            status=$(echo "$response" | jq -r '.fields.status.name')
-            
-            if [ -z "$status" ] || [ "$status" = "null" ]; then
-              echo "Error: Unable to parse status from JIRA response"
-              echo "Response: $response"
-              exit 1
-            fi
-            
-            case "$status" in
-              "Done")
-                approved=true
-                echo "Tester has approved the test cases. Proceeding to production."
-                ;;
-              "Rejected")
-                echo "Tester has rejected the test cases. Pipeline will be stopped."
-                exit 1
-                ;;
-              "To Do")
-                attempt=$((attempt+1))
-                echo "Issue is still in 'To Do' status. Waiting for tester action. Attempt $attempt of $maxAttempts."
-                sleep 300
-                ;;
-              *)
-                attempt=$((attempt+1))
-                echo "Unexpected status: $status. Waiting for tester approval. Attempt $attempt of $maxAttempts."
-                sleep 300
-                ;;
-            esac
-          done
-
-          if [ "$approved" = false ]; then
-            echo "Tester approval timed out. Pipeline will be stopped."
-            exit 1
-          fi
-      displayName: 'Wait for Tester Approval'
+    - bash: |
+        set -euo pipefail
+        : "${JIRA_URL:?Missing Jira endpoint}"
+        : "${JIRA_AUTH:?Missing Jira API credentials}"
+        result=$(curl --fail --silent --show-error --max-time 20 \
+          --request POST "$JIRA_URL" \
+          --header "Authorization: Basic $JIRA_AUTH" \
+          --header 'Content-Type: application/json' \
+          --data "$(jq -nc --arg url "$STAGING_URL"             '{fields:{project:{key:"NP"},summary:"Staging ready for review",description:("Test "+$url),issuetype:{name:"Task"}}}')")
+        issue_key=$(jq -er '.key | select(length > 0)' <<< "$result")
+        echo "Created Jira issue $issue_key"
+        echo "##vso[task.setvariable variable=jiraIssueKey;isOutput=true]$issue_key"
+      name: create
+      displayName: Create Jira approval ticket
       env:
-        JIRA_ISSUE_KEY: $(createJiraIssue.JIRA_ISSUE_KEY)
-        
+        JIRA_URL: $(jiraIssueUrl)
+        JIRA_AUTH: $(jiraBasicAuth)
+        STAGING_URL: $(stagingUrl)
+    - bash: |
+        set -euo pipefail
+        for attempt in $(seq 1 12); do
+          result=$(curl --fail --silent --show-error --max-time 20 \
+            --header "Authorization: Basic $JIRA_AUTH" \
+            --header 'Accept: application/json' \
+            "$JIRA_URL/$JIRA_ISSUE_KEY")
+          status=$(jq -er '.fields.status.name' <<< "$result")
+          case "$status" in
+            Done)
+              echo "Jira review approved"
+              exit 0
+              ;;
+            Rejected)
+              echo "Jira review rejected"
+              exit 1
+              ;;
+            *)
+              echo "Waiting for Jira review ($attempt/12): $status"
+              sleep 300
+              ;;
+          esac
+        done
+        echo "Jira review timed out"
+        exit 1
+      displayName: Wait for tester approval (one-hour maximum)
+      env:
+        JIRA_URL: $(jiraIssueUrl)
+        JIRA_AUTH: $(jiraBasicAuth)
+        JIRA_ISSUE_KEY: $(create.jiraIssueKey)
+
 - stage: ApproveProduction
+  dependsOn: TesterReview
   jobs:
-  - deployment: ApproveProduction
+  - job: Approval
     pool: server
-    environment: Production
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: ManualValidation@0
-            timeoutInMinutes: 1440 # 1 day
-            inputs:
-              notifyUsers: 'pwxcv7352@gmail.com'
-              instructions: 'Please validate the staging deployment and approve if ready for production.'
-
-- stage: DeployToProduction
-  condition: succeeded('ApproveProduction')
-  jobs:
-  - job: CopyAndDeploy
-    pool:
-      name: 'nevotek-agent'
-      demands:
-        - agent.name -equals nevotek-agent-001
+    timeoutInMinutes: 1440
     steps:
-    # Step 1: Copy the Docker image from dev ACR to prod ACR
-    - script: |
-        echo "Logging in to non-prod ACR..."
-        az acr login --name nonprod1927
+    - task: ManualValidation@0
+      inputs:
+        notifyUsers: $(reviewerEmails)
+        instructions: Review the staging deployment and associated Jira issue; reject if tests fail.
+        onTimeout: reject
 
-        echo "Logging in to prod ACR..."
-        az acr login --name prod1927
-
-        echo "Tagging image for production ACR..."
-        docker tag nonprod1927.azurecr.io/myrepo:$(Build.BuildId) prod1927.azurecr.io/myrepo:$(Build.BuildId)
-
-        echo "Pushing image to production ACR..."
-        docker push prod1927.azurecr.io/myrepo:$(Build.BuildId)
-      displayName: 'Copy Image from Dev ACR to Prod ACR'
-      env:
-        DOCKER_CLI_EXPERIMENTAL: 'enabled'  # Enable experimental features if needed
-
-    # Step 4: Swap the development slot with production
+- stage: Production
+  dependsOn: ApproveProduction
+  jobs:
+  - job: SlotSwap
+    pool:
+      vmImage: ubuntu-latest
+    steps:
     - task: AzureAppServiceManage@0
       inputs:
-        azureSubscription: 'myconnection'
-        Action: 'Swap Slots'
-        WebAppName: 'nevotekapp'
-        ResourceGroupName: 'myResourceGroup'
-        SourceSlot: 'development'
-      displayName: 'Swap Deployment Slots'
+        azureSubscription: $(azureServiceConnection)
+        Action: Swap Slots
+        WebAppName: $(webAppName)
+        ResourceGroupName: $(resourceGroup)
+        SourceSlot: staging

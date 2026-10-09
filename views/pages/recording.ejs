@@ -1,168 +1,79 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Record MP3</title>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.5.0/dist/full.css" rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/wavesurfer.js"></script>
-    <style>
-        #waveform {
-            position: relative;
-            width: 100%;
-            height: 150px;
-            border-radius: 12px;
-            background: #1f2937; /* Dark background for the waveform */
+<button type="button" class="rounded-lg border border-slate-500 px-3 py-2 text-sm"
+  onclick="document.getElementById('recordingModal').showModal()">Voice assistant</button>
+<dialog id="recordingModal" class="w-full max-w-md rounded-xl border border-slate-600 bg-slate-900 p-6 text-slate-100 shadow-2xl backdrop:bg-black/70">
+  <h2 class="mb-3 text-xl font-semibold">Voice assistant</h2>
+  <p id="statusMessage" role="status" class="mb-5 text-sm text-slate-300">Press Start to record a request.</p>
+  <div class="flex flex-wrap gap-3">
+    <button id="startRecording" class="rounded bg-emerald-700 px-4 py-2 text-sm">Start recording</button>
+    <button id="stopRecording" disabled class="rounded bg-rose-700 px-4 py-2 text-sm disabled:opacity-40">Stop</button>
+    <button type="button" class="rounded bg-slate-700 px-4 py-2 text-sm"
+      onclick="document.getElementById('recordingModal').close()">Close</button>
+  </div>
+</dialog>
+<script>
+(() => {
+  const status = document.getElementById('statusMessage');
+  const startButton = document.getElementById('startRecording');
+  const stopButton = document.getElementById('stopRecording');
+  let recorder = null;
+  let stream = null;
+  let history = '';
+
+  startButton.addEventListener('click', async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        throw new Error('Microphone recording is unsupported in this browser');
+      }
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const chunks = [];
+      recorder = new MediaRecorder(stream);
+      recorder.addEventListener('dataavailable', e => { if (e.data.size) chunks.push(e.data); });
+      recorder.addEventListener('stop', async () => {
+        stream?.getTracks().forEach(track => track.stop());
+        stream = null;
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        status.textContent = 'Processing request…';
+        try {
+          const payload = new FormData();
+          payload.append('audio', new Blob(chunks, {type: recorder.mimeType || 'audio/webm'}), 'request.webm');
+          payload.append('hotelId', '<%= hotel._id %>');
+          payload.append('history', history);
+          const response = await fetch('/chatbot/get-chatbot-response', { method: 'POST', body: payload });
+          if (!response.ok) throw new Error('Assistant returned HTTP ' + response.status);
+          const data = await response.json();
+          let answer;
+          try { answer = JSON.parse(data.answer); } catch { answer = { message: data.answer }; }
+          history = String(answer.message || '').slice(0, 2000);
+          status.textContent = history || 'No answer returned.';
+          if ('speechSynthesis' in window && history) {
+            const utterance = new SpeechSynthesisUtterance(history);
+            utterance.rate = Number(document.getElementById('rateSelect').value);
+            utterance.pitch = Number(document.getElementById('pitchSelect').value);
+            const name = document.getElementById('voiceSelect').value;
+            utterance.voice = speechSynthesis.getVoices().find(voice => voice.name === name) || null;
+            speechSynthesis.speak(utterance);
+          }
+        } catch {
+          status.textContent = 'Assistant unavailable. Check the speech API configuration.';
         }
-        .modal-box {
-            border-radius: 12px;
-            max-width: 90%;
-            width: 500px;
-            background: #2d3748; /* Darker background for modal */
-            color: #e2e8f0; /* Lighter text color for contrast */
-        }
-        .btn-success {
-            background-color: #38a169; /* Green button background */
-            border-color: #38a169; /* Green button border */
-        }
-        .btn-success:hover {
-            background-color: #2f855a; /* Darker green on hover */
-        }
-        .btn-error {
-            background-color: #e53e3e; /* Red button background */
-            border-color: #e53e3e; /* Red button border */
-        }
-        .btn-error:hover {
-            background-color: #c53030; /* Darker red on hover */
-        }
-        .btn-secondary {
-            background-color: #4a5568; /* Gray button background */
-            border-color: #4a5568; /* Gray button border */
-        }
-        .btn-secondary:hover {
-            background-color: #2d3748; /* Darker gray on hover */
-        }
-    </style>
-</head>
-<body class="bg-gray-900 text-gray-200 flex items-center justify-center h-screen">
-    <!-- Trigger button to open the modal -->
-    <button class="ui button flex items-center" onclick="document.getElementById('recordingModal').showModal()">
-        <i class="fas fa-microphone mr-2"></i>
-        AI Assistant
-    </button>
+      });
+      recorder.start();
+      startButton.disabled = true;
+      stopButton.disabled = false;
+      status.textContent = 'Recording…';
+    } catch {
+      stream?.getTracks().forEach(track => track.stop());
+      stream = null;
+      status.textContent = 'Microphone permission was denied or recording is unavailable.';
+    }
+  });
 
-    <!-- Modal for recording -->
-    <dialog id="recordingModal" class="modal modal-bottom sm:modal-middle">
-        <div class="modal-box p-6">
-            <h3 class="text-3xl font-semibold mb-4">Record Your Voice</h3>
-            <div id="waveform" class="mb-4"></div>
-            <p id="statusMessage" class="py-2 text-center text-lg">Press "Start Recording" to begin.</p>
-            <div class="modal-action flex flex-row items-center gap-4">
-                <button id="startRecording" class="btn btn-success px-4 py-2 rounded-lg text-white">Start Recording</button>
-                <button id="stopRecording" class="btn btn-error px-4 py-2 rounded-lg text-white hidden">Stop Recording</button>
-                <button class="btn btn-secondary px-4 py-2 rounded-lg text-white" onclick="document.getElementById('recordingModal').close()">Close</button>
-            </div>
-        </div>
-    </dialog>
-
-    <script>
-
-        const wavesurfer = WaveSurfer.create({
-            container: '#waveform',
-            waveColor: '#4ade80',
-            progressColor: '#34d399',
-            cursorColor: '#22c55e',
-            height: 150,
-            barWidth: 2,
-            responsive: true,
-            backgroundColor: '#1f2937'
-        });
-
-        let mediaRecorder;
-        let audioChunks = [];
-        let recordingStarted = false;
-        let history = '';
-
-        document.getElementById('startRecording').addEventListener('click', async () => {
-            if (!recordingStarted) {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-
-                mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
-                    wavesurfer.loadBlob(new Blob([event.data], { type: 'audio/mp3' }));
-                };
-
-                mediaRecorder.onstart = () => {
-                    wavesurfer.empty();
-                    wavesurfer.play();
-                    document.getElementById('statusMessage').textContent = 'Recording...';
-                    document.getElementById('startRecording').classList.add('hidden');
-                    document.getElementById('stopRecording').classList.remove('hidden');
-                    recordingStarted = true;
-                };
-
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-                    const formData = new FormData();
-                    formData.append('audio', audioBlob, 'recording.mp3');
-                    formData.append('history', history);
-                    formData.append('hotelId', '<%= hotel.id %>');
-                    try {
-                        const response = await fetch('/chatbot/get-chatbot-response', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        const result = await response.json();
-                        console.log(result.answer)
-                        if (result.audio) {
-                            wavesurfer.loadBlob(new Blob([result.audio], { type: 'audio/mp3' }));
-                        }
-
-                        let resultJSON;
-                        try {
-                            resultJSON = JSON.parse(result.answer);
-                        } catch (error) {
-                            console.error('Failed to parse result JSON:', error);
-                            resultJSON = {message: result.answer};
-                        }
-
-                        document.getElementById('statusMessage').textContent = resultJSON.message;
-                        history = resultJSON.message;
-                        const utterance = new SpeechSynthesisUtterance(resultJSON.message);
-                        const voice = speechSynthesis.getVoices().find(v => v.name === 'Google US English');
-                        if (voice) {
-                            utterance.voice = voice;
-                        }
-                        speechSynthesis.speak(utterance);
-                        if(resultJSON.hasOwnProperty('apps') || resultJSON.hasOwnProperty('foods')) {
-                            alert('Action Detected!')
-                        }
-                    } catch (error) {
-                        console.error(error);
-                        document.getElementById('statusMessage').textContent = 'Error uploading recording.';
-                    }
-
-                    document.getElementById('startRecording').classList.remove('hidden');
-                    document.getElementById('stopRecording').classList.add('hidden');
-                    recordingStarted = false;
-                };
-
-                mediaRecorder.start();
-            }
-        });
-
-        document.getElementById('stopRecording').addEventListener('click', () => {
-            if (recordingStarted) {
-                mediaRecorder.stop();
-            }
-        });
-
-
-    </script>
-</body>
-</html>
+  stopButton.addEventListener('click', () => {
+    if (recorder?.state === 'recording') recorder.stop();
+  });
+  document.getElementById('recordingModal').addEventListener('close', () => {
+    if (recorder?.state === 'recording') recorder.stop();
+  });
+})();
+</script>

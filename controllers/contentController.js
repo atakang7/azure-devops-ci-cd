@@ -1,11 +1,9 @@
-import jwt from 'jsonwebtoken';
 import Hotel from '../models/hotelModel.js';
 import Users from '../models/usersModel.js';
 import Room from '../models/roomModel.js';
 import Apps from '../models/appsModel.js';
 import Foods from '../models/foodsModel.js';
-import config from '../config/config.js';
-import { MongoClient, ObjectId } from 'mongodb';
+import ClientVisit from '../models/clientVisitModel.js';
 // Implement logging
 import { sendTelegramMessage } from '../apis/services/telegram.js';
 
@@ -14,20 +12,6 @@ import { sendTelegramMessage } from '../apis/services/telegram.js';
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export const loginUser = async (req, res) => {
-  const { username, password } = req.body;
-
-  // Here you should verify the username and password with your database
-  // This is a placeholder for demonstration purposes
-  if (username === 'admin' && password === 'password123') {
-    const token = jwt.sign({ username }, config.jwtSecret, { expiresIn: '1h' });
-    res.status(200).json({ token });
-  } else {
-    sendTelegramMessage(`Error: Invalid credentials: ${username}, ${password}`);
-    res.status(401).json({ message: 'Unauthorized, invalid credentials' });
-  }
-};
-
 /**
  * Logs a client visit to a hotel
  * @param {Object} req - Express request object
@@ -35,8 +19,10 @@ export const loginUser = async (req, res) => {
  */
 export const logClientVisit = async (req, res) => {
   const { id } = req.params;
-  const { clientId, visitTime } = req.body;
-
+  const { clientId, visitTime } = req.body || {};
+  if (!clientId || !visitTime || Number.isNaN(Date.parse(visitTime))) {
+    return res.status(400).json({ message: 'clientId and a valid visitTime are required' });
+  }
   try {
     // Ensure that the hotel exists
     const hotel = await Hotel.findById(id);
@@ -49,7 +35,7 @@ export const logClientVisit = async (req, res) => {
     const newVisit = new ClientVisit({
       hotelId: id,
       clientId,
-      visitTime,
+      visitTime: new Date(visitTime),
     });
     await newVisit.save();
 
@@ -105,14 +91,14 @@ export const getDashboardDetails = async (req, res) => {
       }
   
       // Fetch related apps
-      const apps = await Apps.find({ 'hotel': new ObjectId(id) });
+      const apps = await Apps.find({ 'hotel': id });
       // Fetch related foods
-      const foods = await Foods.find({ 'hotel': new ObjectId(id) });
+      const foods = await Foods.find({ 'hotel': id });
 
       // Create a dummy user
       const dummyUser = {
-        name: 'Dummy User',
-        username: 'Dummy User',
+        name: 'Guest',
+        username: 'guest',
         email: 'dummy@example.com',
         role: 'user'
       };

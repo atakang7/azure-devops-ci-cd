@@ -5,13 +5,13 @@ import swaggerUi from 'swagger-ui-express';
 const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
-    title: 'My API',
+    title: 'Hospitality API',
     version: '1.0.0',
     description: 'Nevotek Hotel Hospitality API',
   },
   servers: [
     {
-      url: 'http://localhost:5000',
+      url: 'http://localhost:3000',
       description: 'Development server',
     },
   ],

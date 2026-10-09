@@ -1,0 +1,10 @@
+node_modules
+.git
+.github
+.azure-pipelines
+*.log
+.env*
+*.mp3
+coverage
+tests
+integration
