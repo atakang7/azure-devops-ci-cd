@@ -17,12 +17,28 @@ stages:
     - task: NodeTool@0
       inputs:
         versionSpec: '22.x'
+    - bash: |
+        set -euo pipefail
+        docker run -d --name hospitality-ci-mongo -p 127.0.0.1:27017:27017 mongo:7
+        for attempt in $(seq 1 30); do
+          if docker exec hospitality-ci-mongo mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1; then exit 0; fi
+          sleep 2
+        done
+        echo "MongoDB fixture failed to start"
+        exit 1
+      displayName: Start isolated MongoDB fixture
     - script: |
         set -e
         npm ci
         npm test
         npm run build
       displayName: Install, test, and build
+      env:
+        MONGO_URI: mongodb://127.0.0.1:27017/nevotek_ci
+        API_TOKEN: ci-integration-token-longer-than-24
+    - bash: docker rm -f hospitality-ci-mongo || true
+      displayName: Remove test database
+      condition: always()
     - task: Docker@2
       inputs:
         containerRegistry: $(acrServiceConnection)
