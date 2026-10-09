@@ -2,31 +2,20 @@ import { Router } from 'express';
 import {
   getChatbotResponse,
 } from '../controllers/chatBotController.js';
-import config from '../config/config.js';
-import { fileURLToPath } from 'url';
 import multer from 'multer';
-import fs from 'fs';
-import path from 'path';
+import os from 'node:os';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
-  fs.mkdirSync(path.join(__dirname, 'uploads'));
-}
-
-// Configure multer
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, 'uploads'));
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  }
+  destination: os.tmpdir(),
+  filename: (_req, _file, cb) => cb(null, 'diagnostic-upload-' + randomUUID())
 });
-
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith('audio/'))
+});
 
 /**
  * @swagger
