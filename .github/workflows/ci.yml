@@ -1,0 +1,56 @@
+name: Backend verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      MONGO_URI: mongodb://127.0.0.1:27017/nevotek_ci
+      API_TOKEN: ci-integration-token-longer-than-24
+      OPEN_API_KEY: ''
+      HOST: 127.0.0.1
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install from lockfile
+        run: npm ci
+      - name: Verify JavaScript syntax
+        run: npm run build
+      - name: Test with actual MongoDB
+        run: npm test
+      - name: Check published pipeline for credentials
+        run: |
+          ! grep -E -i 'encodedCreds=|JIRA_CREDS *=|password123' azure-pipelines.yml
+      - name: Build and start service
+        run: |
+          node index.js > "$RUNNER_TEMP/service.log" 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:3000/readyz; then break; fi
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:3000/healthz
+          curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/users | grep -qx 401
+      - name: Service diagnostics on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/service.log" || true
