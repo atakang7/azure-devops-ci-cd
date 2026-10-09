@@ -97,8 +97,8 @@ export const getDashboardDetails = async (req, res) => {
 
       // Create a dummy user
       const dummyUser = {
-        name: 'Dummy User',
-        username: 'Dummy User',
+        name: 'Guest',
+        username: 'guest',
         email: 'dummy@example.com',
         role: 'user'
       };
