@@ -1,168 +1,74 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Showcase</title>
-    <style>
-        /* CSS Variables for easy theming */
-        :root {
-            --primary-color: #4CAF50;
-            --secondary-color: #333;
-            --background-color: #f0f0f0;
-            --text-color: #666;
-            --card-bg-color: #fff;
-            --border-radius: 10px;
-            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --transition-duration: 0.3s;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            line-height: 1.6;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: url('https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg') no-repeat center center fixed;
-            background-size: cover;
-            color: var(--text-color);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        h1 {
-            text-align: center;
-            color: var(--secondary-color);
-            margin-bottom: 40px;
-            font-size: 2.5em;
-        }
-
-        .hotel-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .hotel-card {
-            background-color: var(--card-bg-color);
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            overflow: hidden;
-            transition: transform var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
-            text-decoration: none;
-            color: inherit;
-            will-change: transform;
-        }
-
-        .hotel-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .hotel-card img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            transition: transform var(--transition-duration) ease;
-        }
-
-        .hotel-card:hover img {
-            transform: scale(1.05);
-        }
-
-        .hotel-info {
-            padding: 20px;
-        }
-
-        .hotel-name {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin: 0 0 10px 0;
-            color: var(--secondary-color);
-        }
-
-        .hotel-address {
-            color: var(--text-color);
-            margin-bottom: 10px;
-            font-size: 0.9em;
-        }
-
-        .hotel-rating {
-            color: gold;
-            margin-bottom: 10px;
-        }
-
-        .hotel-price {
-            font-weight: bold;
-            color: var(--primary-color);
-            font-size: 1.2em;
-        }
-
-        /* Accessibility improvements */
-        .hotel-card:focus {
-            outline: 2px solid var(--primary-color);
-            outline-offset: 5px;
-        }
-
-        /* Responsive typography */
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2em;
-            }
-
-            .hotel-info {
-                padding: 15px;
-            }
-
-            .hotel-name {
-                font-size: 1.3em;
-            }
-
-            .hotel-price {
-                font-size: 1.1em;
-            }
-        }
-
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 1.8em;
-            }
-
-            .hotel-name {
-                font-size: 1.2em;
-            }
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10263a">
+  <title>Guest services · Hotels</title>
+  <style>
+    * { box-sizing:border-box }
+    body { margin:0; font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; color:#152a3c; background:#f5f7f9 }
+    a { color:inherit }
+    a:focus-visible { outline:3px solid #2ba599; outline-offset:3px }
+    .shell { max-width:1080px; margin:auto; padding:0 24px }
+    header { background:#10263a; color:#fff }
+    .nav { padding:22px 0; font-weight:750; font-size:1.02rem; letter-spacing:-.02em }
+    .hero { padding:70px 0 75px }
+    .eyebrow { color:#7bd8cb; text-transform:uppercase; letter-spacing:.18em; font-size:.73rem; font-weight:800 }
+    h1 { margin:16px 0; font-size:clamp(2.4rem,6vw,4rem); letter-spacing:-.05em; line-height:1.12; max-width:630px }
+    .hero p { max-width:570px; margin:0; color:#c7d5df; font-size:1.02rem }
+    main { padding:50px 0 75px }
+    .section-head { margin:0 0 22px }
+    h2 { margin:0 0 6px; font-size:1.6rem; letter-spacing:-.025em }
+    .section-head p { margin:0; color:#63778b }
+    .hotels { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px }
+    .hotel { display:flex; flex-direction:column; min-width:0; border:1px solid #dce5eb; padding:24px; border-radius:12px; background:#fff; text-decoration:none; transition:border-color .15s,box-shadow .15s }
+    .hotel:hover { border-color:#80b3ae; box-shadow:0 7px 20px #12263b12 }
+    .glyph { display:flex; align-items:center; justify-content:center; height:48px; width:48px; border-radius:10px; color:#128078; background:#e7f4f1; font-size:1.35rem }
+    .hotel h3 { margin:15px 0 7px; font-size:1.13rem; overflow-wrap:anywhere }
+    .hotel address { font-style:normal; color:#667a8c; font-size:.89rem; margin-bottom:15px }
+    .bottom { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:9px; margin-top:auto; border-top:1px solid #e9eef2; padding-top:17px }
+    .rating { color:#a97517; font-size:.84rem; font-weight:700 }
+    .price { color:#087970; font-size:.93rem; font-weight:700 }
+    .empty { border:1px dashed #bacbd5; border-radius:12px; padding:30px; color:#647789 }
+    footer { border-top:1px solid #dce5eb; color:#6a7e8e; font-size:.83rem; padding:24px 0 }
+    @media(max-width:810px) { .hotels { grid-template-columns:repeat(2,minmax(0,1fr)) } }
+    @media(max-width:540px) {
+      .shell { padding:0 18px }
+      .hero { padding:47px 0 55px }
+      .hotels { grid-template-columns:1fr }
+    }
+  </style>
 </head>
 <body>
-    <div class="ui container">
-        <h1 class="ui header">Discover Our Hotels</h1>
-        <div class="hotel-grid">
-            <% hotels.forEach(hotel => { %>
-                <a href="/dashboard/<%= hotel._id %>" class="hotel-card ui link card daisy-card" tabindex="0">
-                    <div class="image">
-                        <img src="<%= hotel.images[0]  %>" alt="<%= hotel.name %>">
-                    </div>
-                    <div class="content hotel-info">
-                        <h2 class="hotel-name ui header"><%= hotel.name %></h2>
-                        <p class="hotel-address"><%= hotel.address %></p>
-                        <div class="hotel-rating">
-                            <% for(let i = 0; i < hotel.rating; i++) { %>★<% } %>
-                        </div>
-                        <p class="hotel-price">$<%= hotel.price.toFixed(2) %> per night</p>
-                    </div>
-                </a>
-            <% }) %>
-        </div>
+  <header>
+    <div class="shell nav">Hospitality / Guest Experience</div>
+    <div class="shell hero">
+      <span class="eyebrow">Available properties</span>
+      <h1>A better stay starts here.</h1>
+      <p>Browse connected properties, view amenities, and explore each hotel's guest services.</p>
     </div>
+  </header>
+  <main class="shell">
+    <div class="section-head">
+      <h2>Explore hotels</h2>
+      <p><%= hotels.length %> <%= hotels.length === 1 ? 'property' : 'properties' %> available</p>
+    </div>
+    <% if (!hotels.length) { %><p class="empty">No properties are configured in this demo yet.</p><% } %>
+    <div class="hotels">
+      <% hotels.forEach(function(hotel) { %>
+        <a class="hotel" href="/dashboard/<%= hotel._id %>">
+          <span class="glyph" aria-hidden="true">⌂</span>
+          <h3><%= hotel.name %></h3>
+          <address><%= hotel.address %></address>
+          <div class="bottom">
+            <span class="rating">★ <%= hotel.rating %> / 5</span>
+            <span class="price">$<%= hotel.price.toFixed(2) %> / night</span>
+          </div>
+        </a>
+      <% }); %>
+    </div>
+  </main>
+  <footer><div class="shell">Local hospitality application · Architecture and deployment demonstration</div></footer>
 </body>
 </html>
