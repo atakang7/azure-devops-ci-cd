@@ -51,6 +51,24 @@ jobs:
           done
           curl -fsS http://127.0.0.1:3000/healthz
           curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/users | grep -qx 401
+      - name: Seed browser fixtures
+        run: node scripts/seed-browser.mjs
+      - name: Install browser runner
+        run: |
+          npm install --no-save --no-package-lock playwright-core@1.58.2
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then echo "Chromium not installed"; exit 1; fi
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+      - name: Browser E2E and visual snapshots
+        run: node scripts/browser-e2e.cjs
+      - name: Upload screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-evidence
+          path: browser-evidence/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Service diagnostics on failure
         if: failure()
         run: cat "$RUNNER_TEMP/service.log" || true
