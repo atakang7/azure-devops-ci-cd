@@ -22,12 +22,11 @@
     "vitest": "^2.0.5"
   },
   "scripts": {
-    "build": "echo 'No build step needed'",
-    "lint": "eslint .",
     "start": "node index.js",
-    "test": "jest",
-    "test:integration": "vitest run  ./integration/app.test.js",
-    "dev": "nodemon index.js"
+    "dev": "node --watch index.js",
+    "build": "find apis config controllers models routes -name '*.js' -exec node --check {} \\; && node --check index.js",
+    "test": "vitest run tests/server.integration.test.js",
+    "test:integration": "vitest run tests/server.integration.test.js"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -38,5 +37,8 @@
     "globals": "^15.9.0",
     "jest": "^29.7.0",
     "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22 <23"
   }
 }
