@@ -56,7 +56,7 @@ export const createApp = async (req, res) => {
 export const updateApp = async (req, res) => {
     const { id } = req.params;
     try {
-        const app = await Apps.findByIdAndUpdate(id, req.body, { new: true });
+        const app = await Apps.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
         if (!app) {
             res.status(404).json({ message: 'App not found' });
         } else {
@@ -75,7 +75,7 @@ export const updateApp = async (req, res) => {
 export const deleteApp = async (req, res) => {
     const { id } = req.params;
     try {
-        const app = await Apps.findByIdAndRemove(id);
+        const app = await Apps.findByIdAndDelete(id);
         if (!app) {
             res.status(404).json({ message: 'App not found' });
         } else {
