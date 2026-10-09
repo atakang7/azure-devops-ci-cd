@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101e30">
+  <meta name="description" content="A reference CI/CD delivery workflow with staged releases, automated checks, Jira review, and manual production approval.">
+  <title>Azure DevOps Delivery Workflow</title>
+  <style>
+    :root { color-scheme: light; --ink:#15263b; --muted:#52667b; --border:#dae2ea; --navy:#101e30; --teal:#007f77; --bg:#f6f8fa }
+    *, *::before, *::after { box-sizing:border-box }
+    html { scroll-behavior:smooth }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.55 }
+    a { color:inherit }
+    a:focus-visible { outline:3px solid #38b2ac; outline-offset:3px }
+    .container { max-width:1100px; margin:auto; padding:0 26px }
+    header { background:var(--navy); color:#fff }
+    .nav { display:flex; justify-content:space-between; align-items:center; gap:18px; min-height:72px }
+    .mark { font-weight:750; letter-spacing:-.025em; font-size:1.05rem; text-decoration:none }
+    .nav a:last-child { font-size:.88rem; font-weight:600; padding:10px 14px; border:1px solid #45566a; border-radius:8px; text-decoration:none }
+    .hero { padding:90px 0 92px; max-width:800px }
+    .eyebrow { display:inline-block; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.17em; color:#81ded2 }
+    h1 { font-size:clamp(2.5rem,5.5vw,4.4rem); line-height:1.12; letter-spacing:-.052em; margin:20px 0 22px; max-width:760px }
+    .hero p { color:#c1cddc; font-size:1.08rem; max-width:635px; margin:0 }
+    .hero .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:32px }
+    .actions a { border-radius:7px; padding:12px 18px; text-decoration:none; font-weight:650; font-size:.91rem; background:#fff; color:var(--navy) }
+    .actions a.secondary { background:transparent; color:#fff; border:1px solid #6c8093 }
+    main { padding:60px 0 90px }
+    .section-head { max-width:700px; margin-bottom:25px }
+    h2 { letter-spacing:-.03em; font-size:1.75rem; margin:0 0 10px }
+    .section-head p { color:var(--muted); margin:0 }
+    .flow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px }
+    .step { min-height:177px; border-radius:12px; padding:23px; border:1px solid var(--border); background:#fff; box-shadow:0 3px 13px #13263b06 }
+    .number { font-size:.75rem; color:var(--teal); font-weight:850; letter-spacing:.08em }
+    h3 { margin:12px 0 8px; font-size:1.08rem; line-height:1.25; letter-spacing:-.015em }
+    .step p { color:var(--muted); font-size:.91rem; margin:0 }
+    .panel { display:grid; grid-template-columns:1.1fr 1fr; gap:35px; margin-top:60px; border-radius:15px; padding:38px; background:#eaf0f5; border:1px solid #dce6ed }
+    .panel h2 { font-size:1.5rem }
+    .panel p { margin:8px 0 0; color:var(--muted) }
+    .panel ul { margin:0; padding-left:19px; display:grid; gap:13px; font-size:.92rem }
+    .state { margin-top:34px; border-top:1px solid var(--border); padding-top:26px; display:flex; gap:25px; flex-wrap:wrap; align-items:start }
+    .state strong { display:block; font-size:.79rem; text-transform:uppercase; letter-spacing:.08em }
+    .state span { color:var(--muted); font-size:.87rem }
+    footer { padding:24px 0; color:#68788a; border-top:1px solid var(--border); font-size:.82rem }
+    @media(max-width:750px) {
+      .hero { padding:66px 0 75px }
+      .flow { grid-template-columns:repeat(2,minmax(0,1fr)) }
+      .panel { grid-template-columns:1fr; gap:22px; padding:27px }
+    }
+    @media(max-width:510px) {
+      .container { padding:0 18px }
+      .flow { grid-template-columns:1fr }
+      .step { min-height:unset }
+      .nav { align-items:center }
+      .nav a:last-child { padding:8px 10px }
+      h1 { font-size:2.7rem }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="mark" href="#top">Azure DevOps / Release Engineering</a>
+        <a href="https://github.com/atakang7/azure-devops-ci-cd">Source on GitHub ↗</a>
+      </nav>
+      <section class="hero" id="top">
+        <span class="eyebrow">Delivery engineering · reference implementation</span>
+        <h1>Release safely, not just quickly.</h1>
+        <p>A staged deployment workflow combining repeatable builds, container releases, integration checks, tester review, and explicit approval before production.</p>
+        <div class="actions">
+          <a href="#workflow">Explore the workflow ↓</a>
+          <a class="secondary" href="https://github.com/atakang7/azure-devops-ci-cd/blob/main/azure-pipelines.yml">Read pipeline YAML ↗</a>
+        </div>
+      </section>
+    </div>
+  </header>
+  <main class="container">
+    <section id="workflow" aria-labelledby="workflow-heading">
+      <div class="section-head">
+        <h2 id="workflow-heading">Delivery path</h2>
+        <p>One artifact progresses through explicit verification and approval boundaries. A failed gate stops promotion.</p>
+      </div>
+      <div class="flow">
+        <article class="step"><div class="number">01 / INTEGRATE</div><h3>Build & test</h3><p>Install locked dependencies; run real backend tests against MongoDB.</p></article>
+        <article class="step"><div class="number">02 / PACKAGE</div><h3>Container image</h3><p>Build a versioned image and publish it to the configured registry.</p></article>
+        <article class="step"><div class="number">03 / DEPLOY</div><h3>Staging slot</h3><p>Release into an isolated Azure App Service deployment slot.</p></article>
+        <article class="step"><div class="number">04 / VERIFY</div><h3>Readiness check</h3><p>Require a successful HTTP readiness response; deployment fails closed.</p></article>
+        <article class="step"><div class="number">05 / REVIEW</div><h3>Jira & approval</h3><p>Create a review issue, then require human authorization to promote.</p></article>
+        <article class="step"><div class="number">06 / PROMOTE</div><h3>Production swap</h3><p>Use an App Service slot swap only after prior stages succeed.</p></article>
+      </div>
+    </section>
+    <section class="panel" aria-labelledby="controls-heading">
+      <div>
+        <h2 id="controls-heading">Design constraints</h2>
+        <p>This is an infrastructure and application reference, not a claim of an independently verified live Azure deployment. Cloud resources, access policies, and external integrations need their own environment-specific acceptance tests.</p>
+      </div>
+      <ul>
+        <li>Required secrets live in Azure variable groups, never in pipeline source.</li>
+        <li>Failed smoke checks block promotion instead of silently continuing.</li>
+        <li>Production requires an explicit human approval step.</li>
+        <li>Application startup checks MongoDB connectivity and guards API routes.</li>
+      </ul>
+    </section>
+    <div class="state">
+      <div><strong>Executable locally</strong><span>Node.js API + MongoDB test environment</span></div>
+      <div><strong>Requires external setup</strong><span>Azure service connections, App Service, Jira</span></div>
+      <div><strong>Source of truth</strong><span>azure-pipelines.yml</span></div>
+    </div>
+  </main>
+  <footer><div class="container">Azure DevOps release workflow · architecture & verification reference</div></footer>
+</body>
+</html>
