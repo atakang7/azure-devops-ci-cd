@@ -1,103 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Details</title>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.5.0/dist/full.css" rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .card {
-            @apply bg-white rounded-lg shadow-lg p-4;
-        }
-        .card-image {
-            @apply w-full h-48 object-cover rounded-t-lg;
-        }
-        .card-body {
-            @apply p-4;
-        }
-        .card-title {
-            @apply text-2xl font-bold mb-2;
-        }
-        .card-text {
-            @apply text-gray-600;
-        }
-        .card-rating {
-            @apply flex items-center mb-2;
-        }
-        .card-rating-icon {
-            @apply w-6 h-6 mr-1;
-        }
-        .card-price {
-            @apply text-lg font-bold;
-        }
-        .modal-box {
-            border-radius: 12px;
-            max-width: 90%;
-            width: 500px;
-            background: #1f2937;
-            color: #e2e8f0;
-        }
-    </style>
-</head>
-<body class="bg-gray-900 text-gray-200 flex flex-col items-center h-screen">
-    <!-- Main Hotel Card -->
-    <button class="card" onclick="document.getElementById('hotelInfoModal').showModal()">
-        <div class="card-body">
-            <h2 class="card-title"><%= hotel.name %></h2>
-            <p class="card-text"><%= hotel.address %></p>
-            <div class="card-rating">
-                <div class="rating mt-2">
-                    <% for(let i = 0; i < 5; i++) { %>
-                        <span class="text-2xl">★</span>
-                    <% } %>
-                </div>
-            </div>
-        </div>
-    </button>
-
-    <!-- Hotel Info Modal -->
-    <dialog id="hotelInfoModal" class="modal modal-bottom sm:modal-middle">
-        <div class="modal-box">
-            <img src="<%= hotel.images[0] %>" class="mb-4 w-full h-48 object-cover rounded-lg" alt="<%= hotel.name %>">
-            <h3 class="text-2xl font-bold mb-4">Hotel Details</h3>
-            <p class="card-price">$<%= hotel.price %></p>
-            <p class="card-text"><%= hotel.description %></p>
-            <!-- Button to open the hotel info modal -->
-            <h4 class="text-lg font-semibold">Name:</h4>
-            <p class="mb-4"><%= hotel.name %></p>
-            <h4 class="text-lg font-semibold">Address:</h4>
-            <p class="mb-4"><%= hotel.address %></p>
-            <h4 class="text-lg font-semibold">Phone:</h4>
-            <p class="mb-4"><%= hotel.phone %></p>
-            <h4 class="text-lg font-semibold">Rating:</h4>
-            <p class="mb-4"><%= hotel.rating %></p>
-            <h4 class="text-lg font-semibold">Price:</h4>
-            <p class="mb-4">$<%= hotel.price %></p>
-            <h4 class="text-lg font-semibold">Description:</h4>
-            <p class="mb-4"><%= hotel.description %></p>
-            <h4 class="text-lg font-semibold">Facilities:</h4>
-            <ul class="list-disc pl-4 mb-4">
-                <% hotel.facilities.forEach(facility => { %>
-                    <li><%= facility %></li>
-                <% }); %>
-            </ul>
-            <h4 class="text-lg font-semibold">Foods:</h4>
-            <ul class="list-disc pl-4 mb-4">
-                <% hotel.foods.forEach(food => { %>
-                    <li><%= food.name %></li>
-                <% }); %>
-            </ul>
-            <h4 class="text-lg font-semibold">Apps:</h4>
-            <ul class="list-disc pl-4 mb-4">
-                <% hotel.apps.forEach(app => { %>
-                    <li><%= app.name %></li>
-                <% }); %>
-            </ul>
-            <div class="modal-action flex justify-center">
-                <button class="btn btn-secondary" onclick="document.getElementById('hotelInfoModal').close()">Close</button>
-            </div>
-        </div>
-    </dialog>
-</body>
-</html>
+<button type="button" class="rounded-lg border border-slate-500 px-3 py-2 text-sm"
+  onclick="document.getElementById('hotelInfoModal').showModal()">
+  <%= hotel.name %> · Details
+</button>
+<dialog id="hotelInfoModal" class="rounded-xl border border-slate-600 bg-slate-900 p-6 text-slate-100 shadow-2xl backdrop:bg-black/70">
+  <h2 class="mb-4 text-xl font-semibold"><%= hotel.name %></h2>
+  <dl class="grid max-w-md grid-cols-[110px_1fr] gap-3 text-sm">
+    <dt>Address</dt><dd><%= hotel.address %></dd>
+    <dt>Phone</dt><dd><%= hotel.phone %></dd>
+    <dt>Rating</dt><dd><%= hotel.rating %> / 5</dd>
+    <dt>Price</dt><dd>$<%= hotel.price %></dd>
+    <dt>Description</dt><dd><%= hotel.description %></dd>
+    <dt>Facilities</dt><dd><%= hotel.facilities.join(', ') || 'None listed' %></dd>
+  </dl>
+  <form method="dialog" class="mt-6 text-right">
+    <button class="rounded bg-slate-700 px-4 py-2 text-sm hover:bg-slate-600">Close</button>
+  </form>
+</dialog>
