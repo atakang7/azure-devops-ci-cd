@@ -1,29 +1,15 @@
 import axios from 'axios';
 import config from '../../config/config.js';
 
-/**
- * This module provides functions to interact with the Telegram Bot API.
- * It allows you to send messages to a specific chat or group.
- */
-
-/**
- * Sends a message to a specific Telegram chat or group.
- * @param {string} chatId - The ID of the chat or group to send the message to. 
- * @param {string} message - The message to send.
- * @returns {Promise<void>} - A Promise that resolves when the message is sent successfully.
- */
-export const sendTelegramMessage = async (message) => {
+export async function sendTelegramMessage(message) {
+  const { TELEGRAM_API_BASE_URL: base, TELEGRAM_BOT_TOKEN: token,
+    TELEGRAM_BOT_CHAT_ID: chatId } = config.telegram;
+  if (!base || !token || !chatId) return;
   try {
-    const url = `${config.telegram.TELEGRAM_API_BASE_URL}${config.telegram.TELEGRAM_BOT_TOKEN}/sendMessage`;
-    const data = {
-      chat_id: config.telegram.TELEGRAM_BOT_CHAT_ID,
-      text: message,
-    };
-
-    await axios.post(url, data);
-  } catch (error) {
-    console.error('Error sending message to Telegram:', error.message);
+    await axios.post(`${base}${token}/sendMessage`, { chat_id: chatId, text: message },
+      { timeout: 5000 });
+  } catch {
+    // Optional alerts must not block API responses or leak provider details.
+    console.warn('Telegram notification failed');
   }
-};
-
-sendTelegramMessage('Nevotek Server started! 🚀. Visit the website : ' + `${config.telegram.DOMAIN}`);
+}
