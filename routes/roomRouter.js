@@ -250,7 +250,7 @@ router.put('/:id', async (req, res) => {
     const updatedRoom = await Room.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
     if (!updatedRoom) {
       return res.status(404).json({ message: 'Room not found' });
