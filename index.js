@@ -31,9 +31,12 @@ app.get('/readyz', (_req, res) => res.status(db.readyState === 1 ? 200 : 503)
 function verifyApiToken(req, res, next) {
   const secret = config.security.apiToken;
   const supplied = req.get('authorization') || '';
-  const expected = secret ? `Bearer ${secret}` : '';
-  if (!secret || !supplied || Buffer.byteLength(supplied) !== Buffer.byteLength(expected) ||
-      !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) {
+  const bearer = secret ? `Bearer ${secret}` : '';
+  const basic = secret ? 'Basic ' + Buffer.from('operator:' + secret).toString('base64') : '';
+  const equal = (value) => supplied.length === value.length &&
+    timingSafeEqual(Buffer.from(supplied), Buffer.from(value));
+  if (!secret || (!equal(bearer) && !equal(basic))) {
+    res.set('WWW-Authenticate', 'Basic realm="Local demo"');
     return res.status(401).json({ message: 'Authorization required' });
   }
   return next();
