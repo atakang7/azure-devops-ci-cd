@@ -11,7 +11,7 @@ export const getAllUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (error) {
     await sendTelegramMessage(`Error in getAllUsers: ${error.message}`);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Database operation failed' });
   }
 };
 
@@ -26,7 +26,7 @@ export const getUserById = async (req, res) => {
     res.status(200).json(user);
   } catch (error) {
     await sendTelegramMessage(`Error in getUserById: ${error.message}`);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Database operation failed' });
   }
 };
 
@@ -39,7 +39,7 @@ export const createUser = async (req, res) => {
     res.status(201).json(newUser);
   } catch (error) {
     await sendTelegramMessage(`Error in createUser: ${error.message}`);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Database operation failed' });
   }
 };
 
@@ -50,11 +50,13 @@ export const updateUser = async (req, res) => {
   try {
     const updatedUser = await Users.findByIdAndUpdate(id, user, {
       new: true,
+      runValidators: true,
     });
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
     res.status(200).json(updatedUser);
   } catch (error) {
     await sendTelegramMessage(`Error in updateUser: ${error.message}`);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Database operation failed' });
   }
 };
 
@@ -62,11 +64,12 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   const { id } = req.params;
   try {
-    await Users.findByIdAndDelete(id);
+    const deleted = await Users.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ message: "User not found" });
     res.status(200).json({ message: "User deleted" });
   } catch (error) {
     await sendTelegramMessage(`Error in deleteUser: ${error.message}`);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Database operation failed' });
   }
 };
 
