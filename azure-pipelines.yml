@@ -63,6 +63,8 @@ stages:
             inputs:
               azureSubscription: $(azureServiceConnection)
               appName: $(webAppName)
+              deployToSlotOrASE: true
+              resourceGroupName: $(resourceGroup)
               slotName: staging
               containers: $(registryHost)/$(imageRepository):$(Build.BuildId)
 
