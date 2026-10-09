@@ -1,5 +1,10 @@
 import express from 'express';
-// Import the routes
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { timingSafeEqual } from 'node:crypto';
+import expressPartials from 'express-partials';
+import config from './config/config.js';
+import db, { connectDatabase, closeDatabase } from './apis/db/cosmosDB.js';
 import userRouter from './routes/userRouter.js';
 import chatbotRouter from './routes/chatbotRouter.js';
 import contentRouter from './routes/contentRouter.js';
@@ -7,41 +12,72 @@ import hotelsRouter from './routes/hotelsRouter.js';
 import foodsRouter from './routes/foodsRouter.js';
 import roomRouter from './routes/roomRouter.js';
 import appsRouter from './routes/appsRouter.js';
-
-// Import the config file
-import config from './config/config.js'
-// Import the database connection
-import db from './apis/db/cosmosDB.js'
-import cache from './apis/cache/redisCache.js'
-// Import services 
-import { sendTelegramMessage } from './apis/services/telegram.js'
-import { sendEmail } from './apis/services/mail.js'
 import { swaggerUi, swaggerSpec } from './swagger.js';
-import expressPartials from 'express-partials';
-const app = express();
 
-// Install body parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+export const app = express();
+const root = path.dirname(fileURLToPath(import.meta.url));
 
-// Use EJS template
+app.disable('x-powered-by');
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.set('view engine', 'ejs');
-app.set('views', './views');
-
-// Use expressPartials
+app.set('views', path.join(root, 'views'));
 app.use(expressPartials());
 
-// Implemenet the swagger for API documentation
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/healthz', (_req, res) => res.status(200).json({ status: 'alive' }));
+app.get('/readyz', (_req, res) => res.status(db.readyState === 1 ? 200 : 503)
+  .json({ status: db.readyState === 1 ? 'ready' : 'unavailable' }));
 
-app.use('/', contentRouter)
-app.use('/users', userRouter)
-app.use('/chatbot', chatbotRouter)
-app.use('/hotels', hotelsRouter)
-app.use('/foods', foodsRouter)
-app.use('/rooms', roomRouter)
-app.use('/apps', appsRouter)
+function verifyApiToken(req, res, next) {
+  const secret = config.security.apiToken;
+  const supplied = req.get('authorization') || '';
+  const expected = secret ? `Bearer ${secret}` : '';
+  if (!secret || !supplied || Buffer.byteLength(supplied) !== Buffer.byteLength(expected) ||
+      !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) {
+    return res.status(401).json({ message: 'Authorization required' });
+  }
+  return next();
+}
+app.use('/docs', verifyApiToken, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/', verifyApiToken, contentRouter);
+app.use('/users', verifyApiToken, userRouter);
+app.use('/chatbot', verifyApiToken, chatbotRouter);
+app.use('/hotels', verifyApiToken, hotelsRouter);
+app.use('/foods', verifyApiToken, foodsRouter);
+app.use('/rooms', verifyApiToken, roomRouter);
+app.use('/apps', verifyApiToken, appsRouter);
+app.use((_req, res) => res.status(404).json({ message: 'Route not found' }));
+app.use((err, _req, res, _next) => {
+  console.error('Request failed:', err);
+  res.status(err.status || 500).json({ message: err.status && err.status < 500 ? err.message : 'Internal server error' });
+});
 
-app.listen(config.server.port, ()=>{
-  console.log(`server runnig on port ${config.server.port}`)
-})
+export async function startServer() {
+  if (!config.security.apiToken || config.security.apiToken.length < 24) {
+    throw new Error('API_TOKEN must contain at least 24 characters');
+  }
+  if (!Number.isInteger(config.server.port) || config.server.port < 0 || config.server.port > 65535) {
+    throw new Error('Invalid PORT');
+  }
+  await connectDatabase(config.db.uri);
+  const server = await new Promise((resolve, reject) => {
+    const listener = app.listen(config.server.port, config.server.host);
+    listener.once('listening', () => resolve(listener));
+    listener.once('error', reject);
+  });
+  const stop = () => {
+    server.close(() => closeDatabase()
+      .then(() => process.exit(0), () => process.exit(1)));
+    setTimeout(() => process.exit(1), 10000).unref();
+  };
+  process.once('SIGINT', stop);
+  process.once('SIGTERM', stop);
+  return server;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  startServer().catch(error => {
+    console.error('Startup failed:', error.message);
+    process.exitCode = 1;
+  });
+}
