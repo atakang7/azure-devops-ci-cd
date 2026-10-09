@@ -1,17 +1,26 @@
 import config from '../config/config.js';
-import fs from 'fs';
+import fs from 'node:fs';
+import { Types } from 'mongoose';
 import OpenAI from 'openai';
 import Apps from '../models/appsModel.js';
 import Foods from '../models/foodsModel.js';
-import { ObjectId } from 'mongodb';
-const openai = new OpenAI({apiKey: config.openApi.OPEN_API_KEY});
+
 
 export const getChatbotResponse = async (req, res) => {
   const mp3FilePath = req.file?.path;
   if (!mp3FilePath) {
     return res.status(400).json({ message: 'No audio file uploaded' });
   }
+  if (!config.openApi.OPEN_API_KEY) {
+    await fs.promises.rm(mp3FilePath, { force: true });
+    return res.status(503).json({ message: 'Speech transcription is not configured' });
+  }
+  if (!Types.ObjectId.isValid(req.body.hotelId)) {
+    await fs.promises.rm(mp3FilePath, { force: true });
+    return res.status(400).json({ message: 'hotelId must be a valid object ID' });
+  }
   try {
+    const openai = new OpenAI({ apiKey: config.openApi.OPEN_API_KEY });
     const transcriptionResponse = await openai.audio.transcriptions.create({
       file: fs.createReadStream(mp3FilePath),
       model: 'whisper-1',
@@ -20,7 +29,7 @@ export const getChatbotResponse = async (req, res) => {
 
     const query = transcriptionResponse;
 
-    const objectId = new ObjectId(req.body.hotelId)
+    const objectId = new Types.ObjectId(req.body.hotelId)
   
     // Get Hotel related resources Apps and Foods
     const apps = await Apps.find({ hotel: objectId });
@@ -60,7 +69,7 @@ export const getChatbotResponse = async (req, res) => {
     }
     
     Chat History:
-    System: ${req.body.history}
+    System: ${String(req.body.history || '').slice(0, 4000)}
     `;
 
     // Get chatbot response
@@ -73,13 +82,13 @@ export const getChatbotResponse = async (req, res) => {
     });
 
     const answer = chatResponse.choices[0].message.content;
-    // Clean up the uploaded file
-    fs.unlinkSync(mp3FilePath);
-
+ 
     res.status(200).json({ answer });
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(502).json({ message: 'Speech service unavailable' });
+  } finally {
+    await fs.promises.rm(mp3FilePath, { force: true });
   }
 };
 
