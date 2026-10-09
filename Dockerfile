@@ -1,14 +1,10 @@
-#Specify a base Image
-FROM node:alpine
-
-#add working dir
-WORKDIR /usr/app
-#Copy Package.json file to working dir
-COPY ./package.json ./
-#install Some dependencies 
-RUN npm install
-#Copy working Dir to Container Dir
-COPY ./ ./
-
-#default command
-CMD ["npm","start"]
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production HOST=0.0.0.0
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY . .
+RUN chown -R node:node /app
+USER node
+EXPOSE 3000
+CMD ["node", "index.js"]
