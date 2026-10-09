@@ -16,7 +16,7 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "build": "find apis config controllers models routes -name '*.js' -exec node --check {} \\; && node --check index.js",
-    "test": "vitest run tests/server.integration.test.js",
+    "test": "vitest run tests",
     "test:integration": "vitest run tests/server.integration.test.js"
   },
   "devDependencies": {
