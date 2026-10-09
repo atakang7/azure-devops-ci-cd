@@ -89,6 +89,36 @@ stages:
         JIRA_URL: $(jiraIssueUrl)
         JIRA_AUTH: $(jiraBasicAuth)
         STAGING_URL: $(stagingUrl)
+    - bash: |
+        set -euo pipefail
+        for attempt in $(seq 1 12); do
+          result=$(curl --fail --silent --show-error --max-time 20 \
+            --header "Authorization: Basic $JIRA_AUTH" \
+            --header 'Accept: application/json' \
+            "$JIRA_URL/$JIRA_ISSUE_KEY")
+          status=$(jq -er '.fields.status.name' <<< "$result")
+          case "$status" in
+            Done)
+              echo "Jira review approved"
+              exit 0
+              ;;
+            Rejected)
+              echo "Jira review rejected"
+              exit 1
+              ;;
+            *)
+              echo "Waiting for Jira review ($attempt/12): $status"
+              sleep 300
+              ;;
+          esac
+        done
+        echo "Jira review timed out"
+        exit 1
+      displayName: Wait for tester approval (one-hour maximum)
+      env:
+        JIRA_URL: $(jiraIssueUrl)
+        JIRA_AUTH: $(jiraBasicAuth)
+        JIRA_ISSUE_KEY: $(create.jiraIssueKey)
 
 - stage: ApproveProduction
   dependsOn: TesterReview
