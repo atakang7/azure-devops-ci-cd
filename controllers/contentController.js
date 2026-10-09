@@ -3,7 +3,6 @@ import Users from '../models/usersModel.js';
 import Room from '../models/roomModel.js';
 import Apps from '../models/appsModel.js';
 import Foods from '../models/foodsModel.js';
-import { Types } from 'mongoose';
 import ClientVisit from '../models/clientVisitModel.js';
 // Implement logging
 import { sendTelegramMessage } from '../apis/services/telegram.js';
@@ -92,9 +91,9 @@ export const getDashboardDetails = async (req, res) => {
       }
   
       // Fetch related apps
-      const apps = await Apps.find({ 'hotel': new Types.ObjectId(id) });
+      const apps = await Apps.find({ 'hotel': id });
       // Fetch related foods
-      const foods = await Foods.find({ 'hotel': new ObjectId(id) });
+      const foods = await Foods.find({ 'hotel': id });
 
       // Create a dummy user
       const dummyUser = {
