@@ -1,0 +1,23 @@
+name: Temporary lockfile refresh
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regenerate npm lockfile
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit
+          npm ci
+          echo "LOCKFILE_DATA_BEGIN"
+          base64 -w 1000 package-lock.json
+          echo "LOCKFILE_DATA_END"
