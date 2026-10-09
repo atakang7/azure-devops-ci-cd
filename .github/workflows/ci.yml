@@ -61,6 +61,22 @@ jobs:
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
       - name: Browser E2E and visual snapshots
         run: node scripts/browser-e2e.cjs
+      - name: Build runtime Docker image
+        run: docker build --pull -t hospitality-demo:ci .
+      - name: Smoke-test runtime container
+        run: |
+          docker run -d --rm --network host --name hospitality-ci \
+            -e HOST=127.0.0.1 -e PORT=3010 \
+            -e MONGO_URI="$MONGO_URI" -e API_TOKEN="$API_TOKEN" \
+            hospitality-demo:ci
+          trap 'docker logs hospitality-ci || true; docker stop hospitality-ci || true' EXIT
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3010/readyz; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+          curl -fsS -H "Authorization: Bearer $API_TOKEN" http://127.0.0.1:3010/users >/dev/null
       - name: Upload screenshot evidence
         if: always()
         uses: actions/upload-artifact@v4
