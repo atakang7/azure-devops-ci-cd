@@ -11,16 +11,18 @@ export const getChatbotResponse = async (req, res) => {
   if (!mp3FilePath) {
     return res.status(400).json({ message: 'No audio file uploaded' });
   }
-  if (!config.openApi.OPEN_API_KEY) {
-    await fs.promises.rm(mp3FilePath, { force: true });
+  try {
+    if (!config.openApi.OPEN_API_KEY) {
     return res.status(503).json({ message: 'Speech transcription is not configured' });
   }
-  if (!Types.ObjectId.isValid(req.body.hotelId)) {
-    await fs.promises.rm(mp3FilePath, { force: true });
+    if (!Types.ObjectId.isValid(req.body.hotelId)) {
     return res.status(400).json({ message: 'hotelId must be a valid object ID' });
   }
-  try {
-    const openai = new OpenAI({ apiKey: config.openApi.OPEN_API_KEY });
+    const openai = new OpenAI({
+      apiKey: config.openApi.OPEN_API_KEY,
+      timeout: 60_000,
+      maxRetries: 1
+    });
     const transcriptionResponse = await openai.audio.transcriptions.create({
       file: fs.createReadStream(mp3FilePath),
       model: 'whisper-1',
@@ -85,10 +87,14 @@ export const getChatbotResponse = async (req, res) => {
  
     res.status(200).json({ answer });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Speech request failed:', error);
     res.status(502).json({ message: 'Speech service unavailable' });
   } finally {
-    await fs.promises.rm(mp3FilePath, { force: true });
+    try {
+      await fs.promises.rm(mp3FilePath, { force: true });
+    } catch (error) {
+      console.error('Failed to remove temporary audio:', error);
+    }
   }
 };
 
