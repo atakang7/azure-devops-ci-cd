@@ -1,4 +1,5 @@
- import swaggerJsdoc from 'swagger-jsdoc';
+// swagger.js
+import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
 const swaggerDefinition = {
@@ -10,15 +11,15 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: '/',
-      description: 'Current API host',
+      url: 'http://localhost:3000',
+      description: 'Development server',
     },
   ],
 };
 
 const options = {
   swaggerDefinition,
-  apis: ['./routes/**/*.js'],
+  apis: ['./routes/**/*.js'], // Path to your API files
 };
 
 const swaggerSpec = swaggerJsdoc(options);

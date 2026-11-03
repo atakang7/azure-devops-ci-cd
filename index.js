@@ -63,17 +63,11 @@ export async function startServer() {
     throw new Error('Invalid PORT');
   }
   await connectDatabase(config.db.uri);
-  let server;
-  try {
-    server = await new Promise((resolve, reject) => {
-      const listener = app.listen(config.server.port, config.server.host);
-      listener.once('listening', () => resolve(listener));
-      listener.once('error', reject);
-    });
-  } catch (error) {
-    await closeDatabase();
-    throw error;
-  }
+  const server = await new Promise((resolve, reject) => {
+    const listener = app.listen(config.server.port, config.server.host);
+    listener.once('listening', () => resolve(listener));
+    listener.once('error', reject);
+  });
   const stop = () => {
     server.close(() => closeDatabase()
       .then(() => process.exit(0), () => process.exit(1)));

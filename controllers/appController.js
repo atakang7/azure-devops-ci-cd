@@ -1,21 +1,24 @@
 import Apps from '../models/appsModel.js';
 
-function sendDatabaseError(res, error) {
-  console.error('App request failed:', error);
-  const invalid = error.name === 'CastError' || error.name === 'ValidationError';
-  return res.status(invalid ? 400 : 500)
-    .json({ message: invalid ? 'Invalid request data' : 'Database operation failed' });
-}
-
+/**
+ * Get all apps
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 export const getAllApps = async (req, res) => {
     try {
         const apps = await Apps.find();
         res.json(apps);
     } catch (error) {
-        sendDatabaseError(res, error);
+        res.status(500).json({ message: error.message });
     }
 };
 
+/**
+ * Get an app by ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 export const getAppById = async (req, res) => {
     const { id } = req.params;
     try {
@@ -26,20 +29,30 @@ export const getAppById = async (req, res) => {
             res.json(app);
         }
     } catch (error) {
-        sendDatabaseError(res, error);
+        res.status(500).json({ message: error.message });
     }
 };
 
+/**
+ * Create a new app
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 export const createApp = async (req, res) => {
     try {
         const app = new Apps(req.body);
         await app.save();
         res.status(201).json(app);
     } catch (error) {
-        sendDatabaseError(res, error);
+        res.status(400).json({ message: error.message });
     }
 };
 
+/**
+ * Update an app by ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 export const updateApp = async (req, res) => {
     const { id } = req.params;
     try {
@@ -50,10 +63,15 @@ export const updateApp = async (req, res) => {
             res.json(app);
         }
     } catch (error) {
-        sendDatabaseError(res, error);
+        res.status(500).json({ message: error.message });
     }
 };
 
+/**
+ * Delete an app by ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 export const deleteApp = async (req, res) => {
     const { id } = req.params;
     try {
@@ -64,6 +82,6 @@ export const deleteApp = async (req, res) => {
             res.json({ message: 'App deleted successfully' });
         }
     } catch (error) {
-        sendDatabaseError(res, error);
+        res.status(500).json({ message: error.message });
     }
 };
