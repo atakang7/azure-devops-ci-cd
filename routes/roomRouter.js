@@ -3,13 +3,6 @@ import Room from '../models/roomModel.js';
 
 const router = Router();
 
-function sendDatabaseError(res, error) {
-  console.error('Room request failed:', error);
-  const invalid = error.name === 'CastError' || error.name === 'ValidationError';
-  return res.status(invalid ? 400 : 500)
-    .json({ message: invalid ? 'Invalid request data' : 'Database operation failed' });
-}
-
 /**
  * @swagger
  * /rooms:
@@ -53,7 +46,7 @@ router.get('/', async (req, res) => {
     const rooms = await Room.find();
     res.status(200).json(rooms);
   } catch (error) {
-    sendDatabaseError(res, error);
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -110,7 +103,7 @@ router.get('/:id', async (req, res) => {
     }
     res.status(200).json(room);
   } catch (error) {
-    sendDatabaseError(res, error);
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -176,7 +169,7 @@ router.post('/', async (req, res) => {
     const newRoom = await Room.create(req.body);
     res.status(201).json(newRoom);
   } catch (error) {
-    sendDatabaseError(res, error);
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -264,7 +257,7 @@ router.put('/:id', async (req, res) => {
     }
     res.status(200).json(updatedRoom);
   } catch (error) {
-    sendDatabaseError(res, error);
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -297,7 +290,7 @@ router.delete('/:id', async (req, res) => {
     }
     res.status(200).json({ message: 'Room deleted successfully' });
   } catch (error) {
-    sendDatabaseError(res, error);
+    res.status(500).json({ message: error.message });
   }
 });
 

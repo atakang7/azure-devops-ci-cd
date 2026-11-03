@@ -1,4 +1,4 @@
-import { Schema, Types } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
 import db from '../apis/db/cosmosDB.js';
 
 const foodSchema = new Schema({

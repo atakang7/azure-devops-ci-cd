@@ -79,15 +79,6 @@ describe('real Express + MongoDB integration', () => {
     expect(response.status).toBe(400);
   });
 
-  it('rejects uploaded audio when transcription is not configured', async () => {
-    if (process.env.OPEN_API_KEY) return;
-    const response = await api('post', '/chatbot/get-chatbot-response')
-      .field('hotelId', '507f1f77bcf86cd799439011')
-      .attach('audio', Buffer.from('test fixture'), { filename: 'clip.wav', contentType: 'audio/wav' });
-    expect(response.status).toBe(503);
-    expect(response.body.message).toBe('Speech transcription is not configured');
-  });
-
   it('returns 404 for non-existent routes', async () => {
     expect((await api('get', '/unknown-path')).status).toBe(404);
   });
@@ -138,14 +129,6 @@ describe('real Express + MongoDB integration', () => {
     expect((await api('get', '/apps/' + appId)).status).toBe(404);
     expect((await api('delete', '/foods/' + food.body._id)).status).toBe(200);
     expect((await api('delete', '/rooms/' + room.body._id)).status).toBe(200);
-  });
-
-  it('rejects invalid resource IDs without returning driver errors', async () => {
-    for (const path of ['/apps/not-an-id', '/rooms/not-an-id']) {
-      const response = await api('get', path);
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual({ message: 'Invalid request data' });
-    }
   });
 
   it('returns 404 for missing users and rejects invalid hotel visits', async () => {

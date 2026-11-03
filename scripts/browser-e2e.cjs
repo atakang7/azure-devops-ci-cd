@@ -21,7 +21,8 @@ const { chromium } = require('playwright-core');
     await page.getByRole('heading', { name: 'Release safely, not just quickly.' }).waitFor();
     await page.getByRole('heading', { name: 'Delivery path' }).waitFor();
     await page.screenshot({ path: 'browser-evidence/architecture-desktop.png', fullPage: true });
-
+    console.log('VISUAL_ARCHITECTURE_JPEG:' +
+      (await page.screenshot({ type: 'jpeg', quality: 55 })).toString('base64'));
     console.log('PASS static architecture overview');
 
     await page.goto('http://127.0.0.1:3000/');
@@ -32,13 +33,15 @@ const { chromium } = require('playwright-core');
     await page.getByRole('button', { name: /Details/ }).click();
     await page.getByRole('dialog', { name: /Browser Test Hotel/ }).waitFor();
     await page.screenshot({ path: 'browser-evidence/hotel-desktop.png', fullPage: true });
-
+    console.log('VISUAL_HOTEL_JPEG:' +
+      (await page.screenshot({ type: 'jpeg', quality: 55 })).toString('base64'));
     console.log('PASS authenticated backend, EJS navigation and modals');
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('dialog', { name: /Browser Test Hotel/ }).getByRole('button', { name: 'Close' }).click();
     await page.screenshot({ path: 'browser-evidence/hotel-mobile.png', fullPage: true });
-
+    console.log('VISUAL_MOBILE_JPEG:' +
+      (await page.screenshot({ type: 'jpeg', quality: 55 })).toString('base64'));
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 4);
     assert.equal(overflow, false, 'hotel UI overflows the mobile viewport');
     console.log('PASS mobile layout (390px)');

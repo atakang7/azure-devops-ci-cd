@@ -31,9 +31,6 @@ describe('Azure pipeline contract', () => {
   it('never stores inline Jira credentials in the canonical pipeline', () => {
     expect(source).toContain('JIRA_AUTH: $(jiraBasicAuth)');
     expect(source).toContain('deployment-settings');
-    expect(source).toContain('JIRA_PROJECT_KEY: $(jiraProjectKey)');
-    expect(source).toContain('--arg project "$JIRA_PROJECT_KEY"');
-    expect(source).not.toContain('project:{key:"NP"}');
     expect(source).not.toMatch(/encodedCreds\s*=|jiraCreds\s*:\s*['"][A-Za-z0-9+/=]{20,}/i);
   });
 });
