@@ -1,8 +1,7 @@
-import Hotel from '../models/hotelModel.js'; // Assuming you have a Hotel model defined
+import Hotel from '../models/hotelModel.js';
 
 import { sendTelegramMessage } from '../apis/services/telegram.js';
 
-// Get all hotels
 export const getAllHotels = async (req, res) => {
   try {
     const hotels = await Hotel.find();
@@ -14,7 +13,6 @@ export const getAllHotels = async (req, res) => {
   }
 };
 
-// Get a hotel by ID
 export const getHotelById = async (req, res) => {
   try {
     const hotel = await Hotel.findById(req.params.id);
@@ -29,11 +27,6 @@ export const getHotelById = async (req, res) => {
   }
 };
 
-/**
- * Create a new hotel
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
 export const createHotel = async (req, res) => {
   const {
     name,
@@ -44,16 +37,14 @@ export const createHotel = async (req, res) => {
     description,
     facilities,
     images,
-    owner // Ensure this is included
+    owner
   } = req.body;
 
-  // Validate required fields
   if (!name || !address || !phone || rating == null || price == null || !description || !facilities || !images || !owner) {
     return res.status(400).json({ message: 'All required fields must be provided' });
   }
 
   try {
-    // Create a new Hotel instance
     const newHotel = new Hotel({
       name,
       address,
@@ -66,10 +57,8 @@ export const createHotel = async (req, res) => {
       owner
     });
 
-    // Save the new hotel to the database
     const savedHotel = await newHotel.save();
 
-    // Return the created hotel
     res.status(201).json({
       id: savedHotel._id,
       name: savedHotel.name,
@@ -89,7 +78,6 @@ export const createHotel = async (req, res) => {
   }
 };
 
-// Update a hotel by ID
 export const updateHotel = async (req, res) => {
   try {
     const { name, address } = req.body;
@@ -109,7 +97,6 @@ export const updateHotel = async (req, res) => {
   }
 };
 
-// Delete a hotel by ID
 export const deleteHotel = async (req, res) => {
   try {
     const deletedHotel = await Hotel.findByIdAndDelete(req.params.id);

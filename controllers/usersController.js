@@ -1,10 +1,6 @@
-// ----------------------------------------------------------------------------------------------------------------------
-// Controllers for users
-// ----------------------------------------------------------------------------------------------------------------------
 import Users from "../models/usersModel.js";
 import { sendTelegramMessage } from "../apis/services/telegram.js";
 
-// get all users
 export const getAllUsers = async (req, res) => {
   try {
     const users = await Users.find();
@@ -15,7 +11,6 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// get user by id
 export const getUserById = async (req, res) => {
   const { id } = req.params;
   try {
@@ -30,7 +25,6 @@ export const getUserById = async (req, res) => {
   }
 };
 
-// create a new user
 export const createUser = async (req, res) => {
   const user = req.body;
   const newUser = new Users(user);
@@ -43,7 +37,6 @@ export const createUser = async (req, res) => {
   }
 };
 
-// update a user
 export const updateUser = async (req, res) => {
   const { id } = req.params;
   const user = req.body;
@@ -60,7 +53,6 @@ export const updateUser = async (req, res) => {
   }
 };
 
-// delete a user
 export const deleteUser = async (req, res) => {
   const { id } = req.params;
   try {

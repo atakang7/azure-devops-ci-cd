@@ -1,6 +1,6 @@
-import { Schema, model, Types } from 'mongoose';
+import { Schema, Types } from 'mongoose';
 import db from '../apis/db/cosmosDB.js';
-import Hotel from './hotelModel.js'; // Import the Hotel model
+import Hotel from './hotelModel.js';
 
 const appSchema = new Schema({
     name: {

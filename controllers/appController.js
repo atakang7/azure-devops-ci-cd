@@ -7,11 +7,6 @@ function sendDatabaseError(res, error) {
     .json({ message: invalid ? 'Invalid request data' : 'Database operation failed' });
 }
 
-/**
- * Get all apps
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
 export const getAllApps = async (req, res) => {
     try {
         const apps = await Apps.find();
@@ -21,11 +16,6 @@ export const getAllApps = async (req, res) => {
     }
 };
 
-/**
- * Get an app by ID
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
 export const getAppById = async (req, res) => {
     const { id } = req.params;
     try {
@@ -40,11 +30,6 @@ export const getAppById = async (req, res) => {
     }
 };
 
-/**
- * Create a new app
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
 export const createApp = async (req, res) => {
     try {
         const app = new Apps(req.body);
@@ -55,11 +40,6 @@ export const createApp = async (req, res) => {
     }
 };
 
-/**
- * Update an app by ID
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
 export const updateApp = async (req, res) => {
     const { id } = req.params;
     try {
@@ -74,11 +54,6 @@ export const updateApp = async (req, res) => {
     }
 };
 
-/**
- * Delete an app by ID
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
 export const deleteApp = async (req, res) => {
     const { id } = req.params;
     try {

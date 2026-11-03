@@ -9,7 +9,6 @@ export async function sendTelegramMessage(message) {
     await axios.post(`${base}${token}/sendMessage`, { chat_id: chatId, text: message },
       { timeout: 5000 });
   } catch {
-    // Optional alerts must not block API responses or leak provider details.
     console.warn('Telegram notification failed');
   }
 }
