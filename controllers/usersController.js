@@ -10,7 +10,7 @@ export const getAllUsers = async (req, res) => {
     const users = await Users.find();
     res.status(200).json(users);
   } catch (error) {
-    await sendTelegramMessage(`Error in getAllUsers: ${error.message}`);
+    void sendTelegramMessage(`Error in getAllUsers: ${error.message}`);
     res.status(500).json({ message: 'Database operation failed' });
   }
 };
@@ -25,7 +25,7 @@ export const getUserById = async (req, res) => {
     }
     res.status(200).json(user);
   } catch (error) {
-    await sendTelegramMessage(`Error in getUserById: ${error.message}`);
+    void sendTelegramMessage(`Error in getUserById: ${error.message}`);
     res.status(500).json({ message: 'Database operation failed' });
   }
 };
@@ -38,7 +38,7 @@ export const createUser = async (req, res) => {
     await newUser.save();
     res.status(201).json(newUser);
   } catch (error) {
-    await sendTelegramMessage(`Error in createUser: ${error.message}`);
+    void sendTelegramMessage(`Error in createUser: ${error.message}`);
     res.status(500).json({ message: 'Database operation failed' });
   }
 };
@@ -55,7 +55,7 @@ export const updateUser = async (req, res) => {
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
     res.status(200).json(updatedUser);
   } catch (error) {
-    await sendTelegramMessage(`Error in updateUser: ${error.message}`);
+    void sendTelegramMessage(`Error in updateUser: ${error.message}`);
     res.status(500).json({ message: 'Database operation failed' });
   }
 };
@@ -68,7 +68,7 @@ export const deleteUser = async (req, res) => {
     if (!deleted) return res.status(404).json({ message: "User not found" });
     res.status(200).json({ message: "User deleted" });
   } catch (error) {
-    await sendTelegramMessage(`Error in deleteUser: ${error.message}`);
+    void sendTelegramMessage(`Error in deleteUser: ${error.message}`);
     res.status(500).json({ message: 'Database operation failed' });
   }
 };

@@ -27,7 +27,7 @@ export const logClientVisit = async (req, res) => {
     // Ensure that the hotel exists
     const hotel = await Hotel.findById(id);
     if (!hotel) {
-      sendTelegramMessage(`Error: Hotel ${id} not found`);
+      void sendTelegramMessage(`Error: Hotel ${id} not found`);
       return res.status(404).json({ message: 'Hotel not found' });
     }
 
@@ -42,7 +42,7 @@ export const logClientVisit = async (req, res) => {
     res.status(200).json({ message: 'Visit logged successfully' });
   } catch (error) {
     console.error('Error logging client visit:', error);
-    sendTelegramMessage(`Error logging client visit: ${error}`);
+    void sendTelegramMessage(`Error logging client visit: ${error}`);
     res.status(400).json({ message: 'Bad request, invalid input' });
   }
 };
@@ -62,7 +62,7 @@ export const homePage = async (req, res) => {
   } catch (error) {
     // Log and send error message to Telegram
     console.error('Error fetching hotels:', error);
-    await sendTelegramMessage("Error fetching hotels: " + error);
+    void sendTelegramMessage("Error fetching hotels: " + error);
     
     // Send error response to client
     res.status(500).json({ message: 'Internal server error' });
@@ -86,7 +86,7 @@ export const getDashboardDetails = async (req, res) => {
       // Fetch hotel details
       const hotel = await Hotel.findById(id);
       if (!hotel) {
-        sendTelegramMessage(`Error: Hotel ${id} not found`);
+        void sendTelegramMessage(`Error: Hotel ${id} not found`);
         return res.status(404).json({ message: 'Hotel not found' });
       }
   
@@ -112,7 +112,7 @@ export const getDashboardDetails = async (req, res) => {
       });
     } catch (error) {
       console.error('Error retrieving dashboard details:', error);
-      sendTelegramMessage(`Error retrieving dashboard details: ${error}`);
+      void sendTelegramMessage(`Error retrieving dashboard details: ${error}`);
       res.status(500).json({ message: 'Internal server error' });
     }
 };
