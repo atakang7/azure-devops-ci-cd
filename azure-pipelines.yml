@@ -93,12 +93,11 @@ stages:
         set -euo pipefail
         : "${JIRA_URL:?Missing Jira endpoint}"
         : "${JIRA_AUTH:?Missing Jira API credentials}"
-        : "${JIRA_PROJECT_KEY:?Missing Jira project key}"
         result=$(curl --fail --silent --show-error --max-time 20 \
           --request POST "$JIRA_URL" \
           --header "Authorization: Basic $JIRA_AUTH" \
           --header 'Content-Type: application/json' \
-          --data "$(jq -nc --arg url "$STAGING_URL" --arg project "$JIRA_PROJECT_KEY" '{fields:{project:{key:$project},summary:"Staging ready for review",description:("Test "+$url),issuetype:{name:"Task"}}}')")
+          --data "$(jq -nc --arg url "$STAGING_URL"             '{fields:{project:{key:"NP"},summary:"Staging ready for review",description:("Test "+$url),issuetype:{name:"Task"}}}')")
         issue_key=$(jq -er '.key | select(length > 0)' <<< "$result")
         echo "Created Jira issue $issue_key"
         echo "##vso[task.setvariable variable=jiraIssueKey;isOutput=true]$issue_key"
@@ -107,7 +106,6 @@ stages:
       env:
         JIRA_URL: $(jiraIssueUrl)
         JIRA_AUTH: $(jiraBasicAuth)
-        JIRA_PROJECT_KEY: $(jiraProjectKey)
         STAGING_URL: $(stagingUrl)
     - bash: |
         set -euo pipefail
