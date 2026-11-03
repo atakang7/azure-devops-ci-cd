@@ -20,7 +20,7 @@ export const getChatbotResponse = async (req, res) => {
     return res.status(400).json({ message: 'hotelId must be a valid object ID' });
   }
   try {
-    const openai = new OpenAI({ apiKey: config.openApi.OPEN_API_KEY });
+    const openai = new OpenAI({ apiKey: config.openApi.OPEN_API_KEY, timeout: 30000, maxRetries: 0 });
     const transcriptionResponse = await openai.audio.transcriptions.create({
       file: fs.createReadStream(mp3FilePath),
       model: 'whisper-1',
