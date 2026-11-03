@@ -6,18 +6,18 @@ The seed script inserts one hotel fixture; the browser script checks the archite
 
 ## Run
 
-Start MongoDB and the API with the isolated `nevotek_ci` database. Set `API_TOKEN` and `MONGO_URI` as in [runtime configuration](../docs/reference/configuration.md).
+Start MongoDB and the API with the isolated `nevotek_ci` database. Use the token from [runtime configuration](../docs/reference/configuration.md).
 
 ```sh
 npm install --no-save --no-package-lock playwright-core@1.58.2
-node scripts/seed-browser.mjs
-CHROME_PATH=/usr/bin/google-chrome node scripts/browser-e2e.cjs
+MONGO_URI=mongodb://127.0.0.1:27017/nevotek_ci node scripts/seed-browser.mjs
+API_TOKEN=replace-with-random-secret-at-least-24-chars CHROME_PATH=/usr/bin/google-chrome node scripts/browser-e2e.cjs
 ```
 
 ## Test
 
 ```sh
-npm test
+MONGO_URI=mongodb://127.0.0.1:27017/nevotek_ci API_TOKEN=replace-with-random-secret-at-least-24-chars npm test
 ```
 
 ## Config
