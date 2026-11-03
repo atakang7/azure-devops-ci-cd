@@ -1,66 +1,81 @@
-# Azure DevOps CI/CD reference
+# Azure DevOps gated deployment
 
-A staged release pipeline built around a Node.js hospitality demo. The emphasis is on **gating production promotion**, not the size of the sample application.
+This repo contains a Node.js hotel API and an Azure DevOps pipeline that checks a staging release before promoting it to production. The hotel routes supply real database and HTTP work for the release checks.
 
-[Pipeline definition](azure-pipelines.yml) · [Architecture overview](index.html) · [Backend integration test](tests/server.integration.test.js)
+## Quick start
 
-## Delivery flow
-
-```text
-Commit → CI + MongoDB tests → versioned ACR image → staging slot
-        → /readyz smoke check → Jira review → manual approval → slot swap
-```
-
-A failed stage blocks its successors. Only `azure-pipelines.yml` is the maintained Azure pipeline; the earlier drafts were retired.
-
-## Run locally
-
-Requires Node.js 22 and MongoDB 7. All API routes except `/healthz` and `/readyz` require authentication.
+Use Node.js 22 and Docker with a POSIX shell. MongoDB 7 runs locally; the API binds to `127.0.0.1:3000`.
 
 ```sh
 docker run --rm -d --name hospitality-mongo -p 127.0.0.1:27017:27017 mongo:7
 npm ci
 cp .env.example .env
-# Replace API_TOKEN with a random, long secret before exposing the service
+node -e "const fs=require('node:fs'),c=require('node:crypto'),p='.env';fs.writeFileSync(p,fs.readFileSync(p,'utf8').replace(/^API_TOKEN=.*/m,'API_TOKEN='+c.randomBytes(32).toString('hex')))"
 npm start
 ```
 
-Default binding is `127.0.0.1:3000`. Programmatic clients send `Authorization: Bearer <API_TOKEN>`. The browser-facing hotel demo also accepts HTTP Basic username `operator` and the same token as its password, for **local or TLS-protected use only**.
+Open `http://127.0.0.1:3000/`. The browser prompts for HTTP Basic authentication: username `operator`, password the generated `API_TOKEN` in `.env`. API clients can use `Authorization: Bearer <API_TOKEN>`. The health endpoints do not require a token.
 
-For a container, set `HOST=0.0.0.0`, `MONGO_URI` and `API_TOKEN` through the runtime secret configuration. Never bake tokens into images or source.
+In another terminal:
 
-## Verify functionality
+```sh
+curl -fsS http://127.0.0.1:3000/healthz
+curl -fsS http://127.0.0.1:3000/readyz
+curl -fsS -u "operator:$(sed -n 's/^API_TOKEN=//p' .env)" http://127.0.0.1:3000/hotels
+```
+
+## Configuration
+
+Copy `.env.example` for local use. In containers and Azure App Service, supply values through the runtime environment or a secrets store, not the image.
+
+| Variable | Use |
+| --- | --- |
+| `MONGO_URI` | MongoDB connection string; required |
+| `API_TOKEN` | Shared token of at least 24 characters; required |
+| `HOST`, `PORT` | Listen address and port; local defaults `127.0.0.1` and `3000` |
+| `OPEN_API_KEY` | Optional OpenAI key for the voice assistant |
+| `TELEGRAM_API_BASE_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_CHAT_ID` | Optional error notifications; all three must be set |
+
+`/docs` serves the OpenAPI UI behind the same authentication as the API. Basic credentials should only cross localhost or HTTPS.
+
+## Verify changes
+
+With the MongoDB container running:
 
 ```sh
 MONGO_URI=mongodb://127.0.0.1:27017/nevotek_ci \
-  API_TOKEN=replace-with-a-local-ci-secret-longer-than-24 \
-  npm test
+  API_TOKEN=local-test-token-longer-than-24-chars npm test
 npm run build
 ```
 
-The integration test **only accepts the isolated `nevotek_ci` database**, which it deletes during cleanup. CI boots real MongoDB, executes HTTP CRUD and authorization tests, then starts the actual process and checks liveness and readiness.
+The integration tests **delete the `nevotek_ci` database** during cleanup. `npm run build` checks JavaScript syntax; it does not produce compiled output. GitHub Actions runs the tests against MongoDB 7, checks HTTP readiness, exercises the browser UI and smoke-tests a Docker image. Screenshots are uploaded as workflow artifacts.
 
-`/healthz` checks that the process answers HTTP; `/readyz` reports database connectivity. Browser screenshots for the static architecture and hotel demo are retained as CI artifacts.
+## Delivery
 
-## Azure / Jira setup
+`azure-pipelines.yml` is the maintained Azure definition:
 
-Create a restricted Azure variable group named `deployment-settings` with these entries:
+```text
+CI + MongoDB tests -> ACR image -> App Service staging slot
+-> /readyz check -> Jira review -> manual approval -> production slot swap
+```
 
-| Variable | Meaning |
+Create an Azure variable group named `deployment-settings`:
+
+| Variable | Use |
 | --- | --- |
-| `acrServiceConnection` | ACR registry service connection |
-| `imageRepository`, `registryHost` | Repository and ACR login host |
-| `azureServiceConnection`, `webAppName`, `resourceGroup` | Deployment target |
-| `stagingUrl` | HTTPS staging URL for readiness |
+| `acrServiceConnection` | ACR service connection |
+| `imageRepository`, `registryHost` | Image name and ACR login host |
+| `azureServiceConnection`, `webAppName`, `resourceGroup` | Azure deployment target |
+| `stagingUrl` | HTTPS address of the staging slot |
 | `jiraIssueUrl` | Jira issue creation endpoint |
-| `jiraBasicAuth` | **Secret**: base64 of account:API token |
-| `reviewerEmails` | Authorized production approvers |
+| `jiraProjectKey` | Jira project key for approval tickets |
+| `jiraBasicAuth` | Secret: base64 of Jira account email and API token |
+| `reviewerEmails` | Recipients of the manual approval request |
 
-Configure a `Staging` environment and an approval policy for `Production`. Grant only necessary privileges to the service connections. A manual validation stage provides an additional gate.
+Create an App Service staging slot and authorize the service connections. Set up a `Staging` environment and a `Production` approval policy in Azure DevOps. The pipeline also uses a `ManualValidation` job after the Jira issue reaches `Done`; `Rejected` or a one-hour timeout stops promotion.
 
 ## Limits
 
-- The Azure service connections, registry, staging deployment, Jira review and slot swap require external accounts; GitHub CI **does not simulate them or establish that they succeeded**.
-- The hotel app is an **internal/demo API**. Shared-token authentication is unsuitable for a public multi-tenant service; use a real identity provider, TLS, scoped roles and audited writes before external deployment.
-- Speech transcription requires a separately configured OpenAI API key. Browser audio permissions and the external transcription service are not proven by the local integration suite.
-- Redis, duplicate pipeline drafts, hardcoded administrator credentials and unused dependencies were removed from the maintained implementation.
+The API uses one shared token and does not implement user accounts or scoped permissions. It is suitable for a local demo or a restricted environment, not a public multi-tenant deployment. The speech endpoint calls an external service and needs a separate API key.
+
+GitHub CI tests local code and containers. It does not verify access to your Azure registry, Jira instance or App Service slots. Those release stages require real service connections and must be exercised in your Azure project.
