@@ -5,7 +5,6 @@ import OpenAI from 'openai';
 import Apps from '../models/appsModel.js';
 import Foods from '../models/foodsModel.js';
 
-
 export const getChatbotResponse = async (req, res) => {
   const mp3FilePath = req.file?.path;
   if (!mp3FilePath) {
@@ -13,11 +12,11 @@ export const getChatbotResponse = async (req, res) => {
   }
   try {
     if (!config.openApi.OPEN_API_KEY) {
-    return res.status(503).json({ message: 'Speech transcription is not configured' });
-  }
+      return res.status(503).json({ message: 'Speech transcription is not configured' });
+    }
     if (!Types.ObjectId.isValid(req.body.hotelId)) {
-    return res.status(400).json({ message: 'hotelId must be a valid object ID' });
-  }
+      return res.status(400).json({ message: 'hotelId must be a valid object ID' });
+    }
     const openai = new OpenAI({
       apiKey: config.openApi.OPEN_API_KEY,
       timeout: 60_000,
@@ -31,9 +30,7 @@ export const getChatbotResponse = async (req, res) => {
 
     const query = transcriptionResponse;
 
-    const objectId = new Types.ObjectId(req.body.hotelId)
-  
-    // Get Hotel related resources Apps and Foods
+    const objectId = new Types.ObjectId(req.body.hotelId);
     const apps = await Apps.find({ hotel: objectId });
     const foods = await Foods.find({ hotel: objectId });
     const foodNames = foods.map(food => food.name);
@@ -74,7 +71,6 @@ export const getChatbotResponse = async (req, res) => {
     System: ${String(req.body.history || '').slice(0, 4000)}
     `;
 
-    // Get chatbot response
     const chatResponse = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [

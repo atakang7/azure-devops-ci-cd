@@ -46,28 +46,22 @@ export const homePage = async (req, res) => {
 };
 
 export const getDashboardDetails = async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    try {
-      const hotel = await Hotel.findById(id);
-      if (!hotel) {
-        void sendTelegramMessage(`Error: Hotel ${id} not found`);
-        return res.status(404).json({ message: 'Hotel not found' });
-      }
-  
-      const apps = await Apps.find({ 'hotel': id });
-      const foods = await Foods.find({ 'hotel': id });
-
-
-      res.render('./pages/index.ejs', {
-        hotel: hotel,
-        apps: apps,
-        foods: foods,
-      });
-    } catch (error) {
-      console.error('Error retrieving dashboard details:', error);
-      void sendTelegramMessage(`Error retrieving dashboard details: ${error}`);
-      res.status(500).json({ message: 'Internal server error' });
+  try {
+    const hotel = await Hotel.findById(id);
+    if (!hotel) {
+      void sendTelegramMessage(`Error: Hotel ${id} not found`);
+      return res.status(404).json({ message: 'Hotel not found' });
     }
+
+    const apps = await Apps.find({ hotel: id });
+    const foods = await Foods.find({ hotel: id });
+    res.render('./pages/index.ejs', { hotel, apps, foods });
+  } catch (error) {
+    console.error('Error retrieving dashboard details:', error);
+    void sendTelegramMessage(`Error retrieving dashboard details: ${error}`);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };
 
