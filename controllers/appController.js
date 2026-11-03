@@ -1,5 +1,12 @@
 import Apps from '../models/appsModel.js';
 
+function sendDatabaseError(res, error) {
+  console.error('App request failed:', error);
+  const invalid = error.name === 'CastError' || error.name === 'ValidationError';
+  return res.status(invalid ? 400 : 500)
+    .json({ message: invalid ? 'Invalid request data' : 'Database operation failed' });
+}
+
 /**
  * Get all apps
  * @param {Object} req - Express request object
@@ -10,7 +17,7 @@ export const getAllApps = async (req, res) => {
         const apps = await Apps.find();
         res.json(apps);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        sendDatabaseError(res, error);
     }
 };
 
@@ -29,7 +36,7 @@ export const getAppById = async (req, res) => {
             res.json(app);
         }
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        sendDatabaseError(res, error);
     }
 };
 
@@ -44,7 +51,7 @@ export const createApp = async (req, res) => {
         await app.save();
         res.status(201).json(app);
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        sendDatabaseError(res, error);
     }
 };
 
@@ -63,7 +70,7 @@ export const updateApp = async (req, res) => {
             res.json(app);
         }
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        sendDatabaseError(res, error);
     }
 };
 
@@ -82,6 +89,6 @@ export const deleteApp = async (req, res) => {
             res.json({ message: 'App deleted successfully' });
         }
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        sendDatabaseError(res, error);
     }
 };

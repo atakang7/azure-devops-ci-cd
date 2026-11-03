@@ -140,6 +140,14 @@ describe('real Express + MongoDB integration', () => {
     expect((await api('delete', '/rooms/' + room.body._id)).status).toBe(200);
   });
 
+  it('rejects invalid resource IDs without returning driver errors', async () => {
+    for (const path of ['/apps/not-an-id', '/rooms/not-an-id']) {
+      const response = await api('get', path);
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ message: 'Invalid request data' });
+    }
+  });
+
   it('returns 404 for missing users and rejects invalid hotel visits', async () => {
     const missing = '507f1f77bcf86cd799439011';
     expect((await api('get', '/users/' + missing)).status).toBe(404);
